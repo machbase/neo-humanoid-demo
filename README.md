@@ -13,7 +13,7 @@ Humanoid Everyday
 https://github.com/physical-superintelligence-lab/Humanoid-Everyday
 ```
 
-Humanoid Everyday는 Unitree G1/H1 실제 로봇의 작업 수행 데이터를 포함합니다. 주요 센서는 관절 상태, IMU, 오도메트리, 손 센서/action, RGB, depth, LiDAR입니다. 전체 데이터셋은 매우 크므로 이 데모는 `data/catalog/humanoid-category-tasks.json`에 정의된 대표 task 7개를 사용하고, 각 task의 첫 번째 episode 1개만 Machbase Neo에 적재합니다.
+Humanoid Everyday는 Unitree G1/H1 실제 로봇의 작업 수행 데이터를 포함합니다. 주요 센서는 관절 상태, IMU, 오도메트리, 손 센서/action, RGB, depth, LiDAR입니다. 전체 데이터셋은 매우 크므로 이 데모는 `data/catalog/humanoid-category-tasks.json`에 정의된 대표 task 35개를 사용하고, 각 task의 첫 번째 episode 1개만 Machbase Neo에 적재합니다.
 
 ## 실행 환경
 
@@ -52,12 +52,11 @@ export PHY_DB_PASSWORD=manager
 ## 전체 흐름
 
 1. Linux shell에서 `<NEO_HOME>` 아래에 repository를 준비합니다.
-2. Humanoid Everyday task ZIP URL을 확인합니다.
-3. Linux shell에서 대표 task ZIP을 다운로드합니다.
-4. Linux shell에서 각 ZIP의 첫 번째 episode만 압축 해제합니다.
-5. JSH shell에서 데이터 구조를 확인합니다.
-6. JSH shell에서 스키마 생성과 ingest를 실행합니다.
-7. JSH shell에서 데모 서버를 실행하고 브라우저로 접속합니다.
+2. JSH shell에서 Google Sheet 기반 catalog를 생성합니다.
+3. Linux shell에서 대표 task ZIP을 다운로드하고 첫 번째 episode만 압축 해제합니다.
+4. JSH shell에서 데이터 구조를 확인합니다.
+5. JSH shell에서 스키마 생성과 ingest를 실행합니다.
+6. JSH shell에서 데모 서버를 실행하고 브라우저로 접속합니다.
 
 ## 1. 프로젝트 준비
 
@@ -89,102 +88,55 @@ data/            local dataset directory
 
 ## 2. 데이터 다운로드
 
-대표 task catalog:
+대표 task catalog는 Humanoid Everyday Google Sheet에서 category별 첫 5개씩 뽑아 만듭니다. 현재 catalog는 7개 category x 5개 task = 35개 task입니다.
 
-| category | task | robot |
-|---|---|---|
-| `articulate_object` | `press_the_stapler_g1` | G1 |
-| `basic_manipulation` | `pull_a_chair_away_from_table_g1` | G1 |
-| `deformable_object` | `unfold_a_tablet_cover_h1` | H1 |
-| `high_precision` | `press_start_boiling_button` | H1 |
-| `human_robot_interaction` | `pass_plates` | G1 |
-| `loco_manipulation` | `walk_towards_the_cabinet_and_close_the_cabinet_door` | G1 |
-| `tool_use` | `remove_a_soldering_gun_from_its_base_h1` | H1 |
+JSH shell:
 
-Linux shell에서 catalog의 ZIP을 다운로드합니다. 압축 파일만 약 19 GiB입니다.
+```text
+/work > ./scripts/build-catalog-from-sheet.js --per-category 5 --out data/catalog/humanoid-category-tasks.json
+```
+
+현재 category 분포:
+
+```text
+articulate_object        5
+basic_manipulation      5
+deformable_object       5
+high_precision          5
+human_robot_interaction 5
+loco_manipulation       5
+tool_use                5
+```
+
+Linux shell에서 catalog의 ZIP을 다운로드하고 각 ZIP의 첫 번째 episode만 추출합니다. 이 명령은 기존 archive가 있으면 재사용하고, 새로 받은 archive는 추출 후 기본적으로 삭제합니다.
 
 ```sh
 cd <NEO_HOME>/public/neo-humanoid-demo
-mkdir -p data/raw/humanoid-everyday/archives data/raw/humanoid-everyday
-
-node - <<'NODE' | sh
-const fs = require('fs');
-const path = require('path');
-const items = JSON.parse(fs.readFileSync('data/catalog/humanoid-category-tasks.json', 'utf8'));
-for (const item of items) {
-  const archive = path.basename(item.url.split('?')[0]);
-  const out = `data/raw/humanoid-everyday/archives/${archive}`;
-  console.log(`test -f '${out}' || curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 30 -o '${out}' '${item.url}'`);
-}
-NODE
+KEEP_NEW_ARCHIVES=0 scripts/prepare-catalog-episodes.sh \
+  data/catalog/humanoid-category-tasks.json \
+  data/raw/humanoid-everyday
 ```
 
-ZIP 확인:
-
-```sh
-for z in data/raw/humanoid-everyday/archives/*.zip; do
-  unzip -tq "$z"
-done
-```
-
-JSH shell로 URL을 직접 받을 수도 있습니다. 다만 Dropbox ZIP은 크기 때문에 Linux shell의 `curl`을 권장합니다.
+유용한 옵션:
 
 ```text
-/ > cd /work
-/work > ./scripts/download-catalog.js --catalog data/catalog/humanoid-category-tasks.json --out data/raw/humanoid-everyday/archives
+KEEP_NEW_ARCHIVES=1  새로 받은 ZIP을 추출 후에도 보관
+OVERWRITE=1          이미 추출된 episode를 다시 다운로드/추출
+LIMIT=1              START_AT부터 지정 개수만 처리
+START_AT=10          catalog index 10부터 시작
 ```
 
-인증이 필요한 링크이거나 JSH HTTP 클라이언트가 접근할 수 없는 링크라면 Linux shell에서 직접 다운로드한 뒤 아래 위치에 둡니다.
+## 3. 압축 해제 결과
 
-```text
-data/raw/humanoid-everyday/archives/task.zip
-```
-
-## 3. 압축 해제
-
-전체 ZIP을 모두 풀면 수십 GiB 이상이 필요합니다. 데모는 각 대표 task의 첫 번째 episode만 사용하므로, 아래처럼 `data.json`이 있는 첫 번째 episode prefix만 추출합니다.
-
-```sh
-cd <NEO_HOME>/public/neo-humanoid-demo
-ROOT="data/raw/humanoid-everyday"
-ARCH="$ROOT/archives"
-
-extract_first_episode() {
-  zip="$1"
-  task="$2"
-  entry="$(unzip -Z1 "$zip" | awk -F/ '/(^|\/)episode_[0-9]+\/data\.json$/ {
-    ep="";
-    for (i=1; i<=NF; i++) if ($i ~ /^episode_[0-9]+$/) ep=$i;
-    if (ep != "") print ep "\t" $0;
-  }' | sort -t '_' -k2,2n | head -1 | cut -f2-)"
-  prefix="${entry%/data.json}"
-  if [ "${prefix%%/*}" = "$prefix" ]; then
-    rm -rf "$ROOT/$task/$prefix" "$ROOT/$prefix"
-    unzip -q -o "$zip" "$prefix/*" -d "$ROOT"
-    mkdir -p "$ROOT/$task"
-    mv "$ROOT/$prefix" "$ROOT/$task/$prefix"
-  else
-    rm -rf "$ROOT/$prefix"
-    unzip -q -o "$zip" "$prefix/*" -d "$ROOT"
-  fi
-}
-
-extract_first_episode "$ARCH/press_the_stapler_g1.zip" "press_the_stapler"
-extract_first_episode "$ARCH/pull_a_chair_away_from_table_g1.zip" "pull_a_chair_away_from_table_g1"
-extract_first_episode "$ARCH/unfold_a_tablet_cover_h1.zip" "unfold_a_tablet_cover"
-extract_first_episode "$ARCH/press_start_boiling_button.zip" "press_start_boiling_button"
-extract_first_episode "$ARCH/pass_plates.zip" "pass_plates"
-extract_first_episode "$ARCH/walk_towards_the_cabinet_and_close_the_cabinet_door.zip" "walk_towards_the_cabinet_and_close_the_cabinet_door"
-extract_first_episode "$ARCH/remove_a_soldering_gun_from_its_base_h1.zip" "remove_a_soldering_gun_from_its_base"
-```
+전체 ZIP을 모두 보관하거나 풀면 매우 큰 공간이 필요합니다. 위 준비 스크립트는 각 대표 task에서 `data.json`이 있는 첫 번째 episode prefix만 찾아 표준 위치로 옮깁니다.
 
 데모가 기대하는 episode 구조:
 
 ```text
-data/raw/humanoid-everyday/.../episode_0/data.json
-data/raw/humanoid-everyday/.../episode_0/color/*.jpg 또는 *.png
-data/raw/humanoid-everyday/.../episode_0/depth/*
-data/raw/humanoid-everyday/.../episode_0/lidar/*.pcd
+data/raw/humanoid-everyday/<task>/episode_0/data.json
+data/raw/humanoid-everyday/<task>/episode_0/color/*.jpg 또는 *.png
+data/raw/humanoid-everyday/<task>/episode_0/depth/*
+data/raw/humanoid-everyday/<task>/episode_0/lidar/*.pcd
 ```
 
 `data.json`은 배열이거나 `data`, `steps`, `frames`, `episode` 중 하나의 배열 필드를 포함할 수 있습니다. 각 step에서 가능한 센서 필드를 읽고, 파일 경로가 명시되지 않은 RGB/depth/LiDAR는 `color/`, `depth/`, `lidar/` 디렉토리의 정렬 순서를 frame index에 맞춰 사용합니다.
@@ -208,15 +160,20 @@ media.rgb             RGB frame 수
 media.depth           depth frame 수
 ```
 
-이번 대표 catalog 추출 결과는 7개 대표 episode입니다. 기존에 다른 task를 풀어 둔 경우 `check-data.js`의 episode 수는 더 크게 보일 수 있지만, 아래 ingest 명령은 `--catalog-only`로 대표 task만 적재합니다.
+이번 대표 catalog 준비 결과는 35개 대표 episode입니다. 기존에 다른 task를 풀어 둔 경우 `check-data.js`의 episode 수는 더 크게 보일 수 있지만, 아래 ingest 명령은 `--catalog-only`로 catalog task만 적재합니다.
 
-검증한 대표 catalog 적재 결과:
+이번 로컬 준비 검증 결과:
 
 ```text
-tasks: 7
-frames: 2443
-pointFrames: 221
-durationMs: 81433
+catalog: 35
+ready: 35
+missing: 0
+raw episodes: 37
+steps: 16444
+durationMinutes: 9.12
+media.lidar: 14760
+media.rgb: 16444
+media.depth: 16444
 ```
 
 ## 5. 스키마 생성
@@ -282,25 +239,25 @@ PHY_POINT_FRAME
 --point-frame-stride 10    LiDAR point frame을 10프레임마다 저장
 ```
 
-적재 결과:
+이번 적재 결과:
 
 ```json
 {
   "ok": true,
   "dataset": "humanoid-everyday",
   "sequence": "humanoid-everyday-10m",
-  "sourceEpisodes": 7,
-  "frames": 2443,
-  "pointFrames": 221,
-  "tasks": 7,
+  "sourceEpisodes": 37,
+  "frames": 15805,
+  "pointFrames": 1428,
+  "tasks": 35,
   "episodeLimitPerTask": 1,
   "pointStride": 4,
   "pointFrameStride": 10,
-  "durationMs": 81433
+  "durationMs": 526833
 }
 ```
 
-`sourceEpisodes`는 raw 디렉토리에서 발견한 전체 episode 수입니다. 대표 catalog만 유지하면 이 값은 7입니다.
+`sourceEpisodes`는 raw 디렉토리에서 발견한 전체 episode 수입니다. 현재 로컬 raw에는 기존 샘플까지 남아 있어 37이고, API와 UI에는 `--catalog-only`로 적재된 35개 episode가 표시됩니다.
 
 기본 dataset/sequence:
 
@@ -359,7 +316,7 @@ curl 'http://127.0.0.1:56802/api/frame?frameId=100'
 curl 'http://127.0.0.1:56802/api/points?frameId=100&lod=2'
 ```
 
-대표 catalog 적재가 끝나면 `/api/episodes`는 `episodeCount: 7`을 반환하고, 각 episode에 `task`, `category`, `robotType`이 포함됩니다.
+대표 catalog 적재가 끝나면 `/api/episodes`는 `episodeCount: 35`를 반환하고, 각 episode에 `task`, `category`, `robotType`이 포함됩니다.
 
 `/api/points.bin`은 browser UI가 우선 사용하는 binary endpoint입니다.
 
@@ -430,14 +387,14 @@ PHY_DB_HOST, PHY_DB_PORT, PHY_DB_USER, PHY_DB_PASSWORD 값을 확인합니다.
 Machbase Neo DB가 127.0.0.1:5656에서 실행 중인지 확인합니다.
 ```
 
-대표 task가 7개보다 적게 보이는 경우:
+대표 task가 35개보다 적게 보이는 경우:
 
 ```text
 ./scripts/check-data.js --data-root data/raw/humanoid-everyday
 curl http://127.0.0.1:56802/api/episodes
 ```
 
-`/api/episodes`의 `episodeCount`가 7보다 작으면 catalog ZIP 다운로드, 첫 episode 추출, `--catalog-only --episode-limit-per-task 1` ingest 명령을 다시 확인합니다.
+`/api/episodes`의 `episodeCount`가 35보다 작으면 catalog 생성, ZIP 다운로드, 첫 episode 추출, `--catalog-only --episode-limit-per-task 1` ingest 명령을 다시 확인합니다.
 
 PCD point가 보이지 않는 경우:
 

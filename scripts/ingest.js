@@ -94,8 +94,9 @@ function main() {
       if (limit > 0 && remaining <= 0) break;
       if (limit <= 0 && targetMs > 0 && elapsedMs >= targetMs) break;
       const episode = info.episodes[e];
-      const task = taskName(episode.name);
-      const meta = catalog[task] || null;
+      const sourceTask = taskName(episode.name);
+      const meta = catalog[sourceTask] || null;
+      const task = meta && meta.task || sourceTask;
       if (catalogOnly && !meta) continue;
       loadedByTask[task] = loadedByTask[task] || 0;
       if (episodeLimitPerTask > 0 && loadedByTask[task] >= episodeLimitPerTask) continue;

@@ -7,11 +7,67 @@
     "url": "https://www.dropbox.com/scl/fi/nou16s8hvcvdc95faz1rm/press_the_stapler_g1.zip?rlkey=ze19v23ah5pidev8mim8hxurr&st=c9fiofap&dl=1"
   },
   {
+    "category": "articulate_object",
+    "task": "open_a_drawer_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to grab the drawer kept on the middle of the desk and pull it out towards the robot",
+    "url": "https://www.dropbox.com/scl/fi/63uw6lvotgeeb38htxp5g/open_a_drawer_g1.zip?rlkey=019vgk2s0i94vewmv5zhkpqm3&st=wa5k32r1&dl=1"
+  },
+  {
+    "category": "articulate_object",
+    "task": "close_a_kettle_lid_h1",
+    "robot": "h1",
+    "description": "the robot uses its right hand to push down on the lid of a kettle kept in the middle of the desk to close it",
+    "url": "https://www.dropbox.com/scl/fi/w7suxfd8lxr5da39003ky/close_a_kettle_lid_h1.zip?rlkey=heopetufunan08jeci4xxkdz9&st=j59rwws0&dl=1"
+  },
+  {
+    "category": "articulate_object",
+    "task": "close_a_laptop_lid_h1",
+    "robot": "h1",
+    "description": "the robot uses its right hand to push down on the lid of a laptop kept in the middle of the desk to close it",
+    "url": "https://www.dropbox.com/scl/fi/95fdgaqe4lrxq7g3ho051/close_a_laptop_lid_h1.zip?rlkey=oz3eyoj3spy6elmq87u16jfsh&st=t7nh9hyr&dl=1"
+  },
+  {
+    "category": "articulate_object",
+    "task": "press_a_big_button_h1",
+    "robot": "h1",
+    "description": "the robot uses its right hand to make a fist and press the red button kept in the middle of the desk",
+    "url": "https://www.dropbox.com/scl/fi/bwejuxpjlr0ehsaltt9ba/press_a_big_button_h1.zip?rlkey=95xc8rzdlcbag80rn07aqdi0r&st=ztk5mqmx&dl=1"
+  },
+  {
     "category": "basic_manipulation",
     "task": "pull_a_chair_away_from_table_g1",
     "robot": "g1",
     "description": "The robot uses its both hands to grab the back of the black chair and pull it away from the white table",
     "url": "https://www.dropbox.com/scl/fi/8blym019aszo41k5or52v/pull_a_chair_away_from_table_g1.zip?rlkey=vf0wwqogp5mt387rvqz8p80zp&st=g6h6glba&dl=1"
+  },
+  {
+    "category": "basic_manipulation",
+    "task": "take_out_the_lid_of_the_spray_bottle",
+    "robot": "g1",
+    "description": "the robot uses its right hand to grab and lift the lid of the spray bottle kept in the middle of the desk and places the lid on the right side of the bottle",
+    "url": "https://www.dropbox.com/scl/fi/uxnco1j5bm78lb5cdmpt4/take_out_the_lid_of_the_spray_bottle.zip?rlkey=pinwum504vjh82tameksp9xys&st=kk6fc1kc&dl=1"
+  },
+  {
+    "category": "basic_manipulation",
+    "task": "use_liquid_hand_soap",
+    "robot": "g1",
+    "description": "the robot uses its right hand fist to press the hand soap kept in the middle of the table to get liquid hand soap out",
+    "url": "https://www.dropbox.com/scl/fi/2rvwpck3m78jocpaidol3/use_liquid_hand_soap.zip?rlkey=i924166d4xl0gvnex2srkld2u&st=bx5q7dsj&dl=1"
+  },
+  {
+    "category": "basic_manipulation",
+    "task": "put_small_tripod_upright",
+    "robot": "h1",
+    "description": "a tripod lies near the right hand side of the table and the robot grab a leg of the tripod using its right hand and put it up right.",
+    "url": "https://www.dropbox.com/scl/fi/ag2j7hljf8oufu9niryso/put_small_tripod_upright.zip?rlkey=fj04he7wzrpj8tehvn1rzpwhw&st=tav08nrg&dl=1"
+  },
+  {
+    "category": "basic_manipulation",
+    "task": "pour_out_some_sunflower_seeds",
+    "robot": "h1",
+    "description": "the robot picks up a small bag of sunflower seeds on the right hand side and take it to the empty plate on the left hand side then pours some sunflower seeds on to the plate.",
+    "url": "https://www.dropbox.com/scl/fi/gts76giw3lvhpiu0skz6d/pour_out_some_sunflower_seeds.zip?rlkey=fqlleezvt99m8qce1gvrdk2pf&st=sqjf2350&dl=1"
   },
   {
     "category": "deformable_object",
@@ -21,11 +77,67 @@
     "url": "https://www.dropbox.com/scl/fi/abx8ib3qaw3aef53p2s3s/unfold_a_tablet_cover_h1.zip?rlkey=du0vbdhquqcsyaq94jcpvk0pn&st=vlg8vrll&dl=1"
   },
   {
+    "category": "deformable_object",
+    "task": "fold_a_toolkit_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to lift an edge of the toolkit kept in middle of the desk and make one fold in it",
+    "url": "https://www.dropbox.com/scl/fi/4m4da071ltb7xvvssuqdf/fold_a_toolkit_g1.zip?rlkey=o2fzx60pmccxm1e9qobtvu5wn&st=xfo3oydu&dl=1"
+  },
+  {
+    "category": "deformable_object",
+    "task": "unfold_a_tablet_cover_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to open a folded tablet cover kept in the middle of the desk",
+    "url": "https://www.dropbox.com/scl/fi/5x075d5pct7m6uk06bswn/unfold_a_tablet_cover_g1.zip?rlkey=t6w9kagl1r3g3fm27j20dkjhq&st=hut1fwv7&dl=1"
+  },
+  {
+    "category": "deformable_object",
+    "task": "unfold_a_toolkit_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to open a black folded toolkit cover kept in the middle of the desk",
+    "url": "https://www.dropbox.com/scl/fi/ylbjrclisuriqpnukg8df/unfold_a_toolkit_g1.zip?rlkey=acg4svjl5v2jkxc4o8j0zinv6&st=1te81310&dl=1"
+  },
+  {
+    "category": "deformable_object",
+    "task": "squeeze_a_pillow",
+    "robot": "h1",
+    "description": "the robot uses both hands to grab the left and right side of the pillow kept in the middle of the desk and bring the hands closer to squeeze the pillow",
+    "url": "https://www.dropbox.com/scl/fi/f1v4jgnnm32dhaqqpmrzn/squeeze_a_pillow.zip?rlkey=7yan7e0tvfy7nlity9xjfvnox&st=rcv1onjw&dl=1"
+  },
+  {
     "category": "high_precision",
     "task": "press_start_boiling_button",
     "robot": "h1",
     "description": "A kettle is kept at the center of the table close to the robot and the robot uses its right index finger to press downwards on the transparent start boiling button",
     "url": "https://www.dropbox.com/scl/fi/t4rfu7t221ct1gqutdoyd/press_start_boiling_button.zip?rlkey=cf1pp6gvq38qphfqgt77qnj9v&st=07dy25tp&dl=1"
+  },
+  {
+    "category": "high_precision",
+    "task": "place_the_kettle_on_its_base",
+    "robot": "h1",
+    "description": "A kettle and its base are kept separately on the desk infront of the robot and the robot uses its right hand to lift the kettle by its handle and places it on its base to align it correctly.",
+    "url": "https://www.dropbox.com/scl/fi/72g506afaljiawqlxpu8y/place_the_kettle_on_its_base.zip?rlkey=rnlydexyb21ds4y5jq4s8trlb&st=lmwpngs7&dl=1"
+  },
+  {
+    "category": "high_precision",
+    "task": "stack_a_rolls_of_paper_towel_on_top_of_the_other",
+    "robot": "h1",
+    "description": "A few rolls of toilet paper are kept infront of the robot and the robot uses its right hand to lift one of the rolls and and places it on top of the other rolls to stack it.",
+    "url": "https://www.dropbox.com/scl/fi/1tsm3bdvxdvy5o3ayy473/stack_a_rolls_of_paper_towel_on_top_of_the_other.zip?rlkey=umow4p3kp8p007zl9kstkyogt&st=hnww1i9n&dl=1"
+  },
+  {
+    "category": "high_precision",
+    "task": "align_a_stack_of_books",
+    "robot": "h1",
+    "description": "The robot uses its right hand to align two notebooks stacked together until they are fully overlapped",
+    "url": "https://www.dropbox.com/scl/fi/9wphwvjgxwj7y0n8yojg5/align_a_stack_of_books.zip?rlkey=yt0m0zmiri8jc3sytjt3r3ldl&st=vel7q7ml&dl=1"
+  },
+  {
+    "category": "high_precision",
+    "task": "place_a_soldering_gun_into_its_base_h1",
+    "robot": "h1",
+    "description": "the robot uses its right hand to grab and lift the soldering gun kept on the middle of the table and puts it in its base",
+    "url": "https://www.dropbox.com/scl/fi/vrva0kh2z2bxr4u2fdccm/place_a_soldering_gun_into_its_base_h1.zip?rlkey=n0w4qoqtiaqmpqxmx6l9m4biy&st=r201pak2&dl=1"
   },
   {
     "category": "human_robot_interaction",
@@ -35,6 +147,34 @@
     "url": "https://www.dropbox.com/scl/fi/ps1eqlhl01egot2bufm7p/pass_plates.zip?rlkey=iu55k0cnlve46sc81t0nyuoyw&st=bm4m5ahz&dl=1"
   },
   {
+    "category": "human_robot_interaction",
+    "task": "pick_up_a_emotional_support_dumplings_and_hand_it_to_a_person",
+    "robot": "h1",
+    "description": "An emotional support dumpling is kept in a soft plate infront in the middle of the desk infront of the robot. The robot extends its right arm to pick up the dumpling and hands it to a person",
+    "url": "https://www.dropbox.com/scl/fi/mzsuhmejws1w4fyo9gugv/pick_up_a_emotional_support_dumplings_and_hand_it_to_a_person.zip?rlkey=tq8yllk80y44pr41x4jpjcek0&st=gdzati9l&dl=1"
+  },
+  {
+    "category": "human_robot_interaction",
+    "task": "take_a_emotional_support_dumplings_from_a_person_and_place_it_on_the_desk",
+    "robot": "h1",
+    "description": "A person hands a emotional support dumpling to the robot which it grabs with its right hand and places in the soft place kept infront of it in the centre of the desk",
+    "url": "https://www.dropbox.com/scl/fi/zkx8ron270k9hxbq1qnpz/take_a_emotional_support_dumplings_from_a_person_and_place_it_on_the_desk.zip?rlkey=8k748snr6qyjqdnl2ppuso0nd&st=a27vsjbx&dl=1"
+  },
+  {
+    "category": "human_robot_interaction",
+    "task": "pick_up_a_toilet_paper_and_hand_it_to_a_person",
+    "robot": "h1",
+    "description": "A toilet paper roll is kept on the black spot on the desk infront of the robot and the robot inserts its right thumb into the hole in the centre to grab the roll. Then it passes the roll to a person.",
+    "url": "https://www.dropbox.com/scl/fi/mg3wchuqf073tr2l6vudb/pick_up_a_toilet_paper_and_hand_it_to_a_person.zip?rlkey=hummc9sbygtjqu73e9zvbj86j&st=a8wzqzw8&dl=1"
+  },
+  {
+    "category": "human_robot_interaction",
+    "task": "pick_up_a_duster_from_the_table_and_hand_it_to_a_person",
+    "robot": "h1",
+    "description": "An orange duster is kept infront of the robot in the middle of the table and the robot extends its right arm to grab the duster, picks it up and hands it to a person",
+    "url": "https://www.dropbox.com/scl/fi/ze9qxdb64y8zlr8fksyh8/pick_up_a_duster_from_the_table_and_hand_it_to_a_person.zip?rlkey=8p6milr1189r53qw26fctffcb&st=6ezdmvzc&dl=1"
+  },
+  {
     "category": "loco_manipulation",
     "task": "walk_towards_the_cabinet_and_close_the_cabinet_door",
     "robot": "g1",
@@ -42,10 +182,66 @@
     "url": "https://www.dropbox.com/scl/fi/buqy2rrnodgpvztz0t0gu/walk_towards_the_cabinet_and_close_the_cabinet_door.zip?rlkey=k5x8pj05puoss1lh75kqvg49v&st=uo4r9tog&dl=1"
   },
   {
+    "category": "loco_manipulation",
+    "task": "walk_towards_the_desk_and_use_an_air_pump_on_the_desk",
+    "robot": "g1",
+    "description": "The robot walks towards a desk on which an air pump is kept in the middle. It lifts it up and holds it with its left hand and uses its right hand to compress it by pushing its handle inwards.",
+    "url": "https://www.dropbox.com/scl/fi/urpvqcaqkoo9v8cnkbasr/walk_towards_the_desk_and_use_an_air_pump_on_the_desk.zip?rlkey=c6q7m25p98jrgg32bhc8t51hu&st=qyiwdcym&dl=1"
+  },
+  {
+    "category": "loco_manipulation",
+    "task": "walk_towards_a_desk_and_pick_up_a_bottle_and_put_it_in_a_container",
+    "robot": "g1",
+    "description": "The robot walk up to a desk on which a bottle is kept on the left hand side and a container is kept on the right hand side. The robot uses its left hand to pick up the bottle and places it in the container.",
+    "url": "https://www.dropbox.com/scl/fi/jrhg70dxnmharfy8h40on/walk_towards_a_desk_and_pick_up_a_bottle_and_put_it_in_a_container.zip?rlkey=ikhx2ry4baynh0qr4ah2aqtwg&st=j0g954u0&dl=1"
+  },
+  {
+    "category": "loco_manipulation",
+    "task": "walk_towards_a_desk_and_place_a_cube_on_a_tray",
+    "robot": "g1",
+    "description": "The robot walks towards a desk on which a file tray is kept in the middle and a cube is kept to its right. The robot lifts the cube using its right hand and places it on the file tray.",
+    "url": "https://www.dropbox.com/scl/fi/v4qp03cc2ziwn2dkae2m6/walk_towards_a_desk_and_place_a_cube_on_a_tray.zip?rlkey=mbax2afboklz6l5ve2rv9cxid&st=lntbkgkc&dl=1"
+  },
+  {
+    "category": "loco_manipulation",
+    "task": "walk_towards_a_desk_and_place_a_stapler_on_a_tray",
+    "robot": "g1",
+    "description": "The robot walks towards a desk on which a file tray is kept in the middle and a stapler is kept to its right. The robot lifts the stapler using its right hand and places it on the file tray.",
+    "url": "https://www.dropbox.com/scl/fi/79lnq98knfdrnbjzwsqfr/walk_towards_a_desk_and_place_a_stapler_on_a_tray.zip?rlkey=bpxyv7oobyh8s7lrcy0i716wx&st=29uil3jh&dl=1"
+  },
+  {
     "category": "tool_use",
     "task": "remove_a_soldering_gun_from_its_base_h1",
     "robot": "h1",
     "description": "the robot uses its right hand to grab the soldering gun kept on the middle of the table and pulls it out of its base and keep it on the right side of the base",
     "url": "https://www.dropbox.com/scl/fi/zew4eclzsj2qvzlbwssfa/remove_a_soldering_gun_from_its_base.zip?rlkey=g095vgd8yc2hwkq1pmxmi45gy&st=q17wxn9q&dl=1"
+  },
+  {
+    "category": "tool_use",
+    "task": "pour_sunflower_seeds_on_plate_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to pick up a bag of sunflower seeds kept in the middle of the desk and tilts it over a plate kept next to it to pour out a few seeds and then puts the bag of seeds back on the desk",
+    "url": "https://www.dropbox.com/scl/fi/8yylflz54ow3ipl8251bl/pour_sunflower_seeds_on_plate_g1.zip?rlkey=qdcg3318o4lf6fffimao6wqc5&st=xxxpg5g2&dl=1"
+  },
+  {
+    "category": "tool_use",
+    "task": "remove_a_soldering_gun_from_its_base_g1",
+    "robot": "g1",
+    "description": "Use the left hand of the robot to grab the soldering gun kept on the middle of the table and pull it out of its base and keep it on the left side of the base",
+    "url": "https://www.dropbox.com/scl/fi/a31fy6gomjn00ywn46woi/remove_a_soldering_gun_from_its_base_g1.zip?rlkey=3xof3bj3p1vfcqqa5mhr9hnsn&st=sh63t2rj&dl=1"
+  },
+  {
+    "category": "tool_use",
+    "task": "pour_water_from_a_kettle_into_a_cup",
+    "robot": "g1",
+    "description": "the robot uses its right hand to lift up a kettle kept on the middle of the desk by its handle and tilt it into a glass kept next to it to pour out water",
+    "url": "https://www.dropbox.com/scl/fi/98q0bkaieyxeajszniqoi/pour_water_from_a_kettle_into_a_cup.zip?rlkey=i7fnw5hwnk5e27zont5k952sd&st=74fji2oe&dl=1"
+  },
+  {
+    "category": "tool_use",
+    "task": "use_the_hammer",
+    "robot": "g1",
+    "description": "A hammer is kept on the right hand side and a pillow is kept on the left hand side on the desk infront of the robot and the robot uses its right hand to pick up the hammer and makes a downward swinging motion to hit the pillow",
+    "url": "https://www.dropbox.com/scl/fi/5nkm71uuj17n9igkitvf8/use_the_hammer.zip?rlkey=aepz0pv6qszfmbwhdz964yrdy&st=85ltbs13&dl=1"
   }
 ]

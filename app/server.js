@@ -5,7 +5,7 @@ const http = require('http');
 const path = require('path');
 const process = require('process');
 const ROOT = path.dirname(path.dirname(path.resolve(process.argv[1])));
-const { episodes, frame, manifest, points, pointsBinary, poses } = require(path.join(ROOT, 'lib', 'api.js'));
+const { episodes, episodeExportZip, frame, manifest, points, pointsBinary, poses, timelineQueryLink } = require(path.join(ROOT, 'lib', 'api.js'));
 const { intArg, parseArgs } = require(path.join(ROOT, 'lib', 'env.js'));
 
 function println() {
@@ -23,7 +23,7 @@ function setApiHeaders(ctx) {
   ctx.setHeader('access-control-allow-origin', '*');
   ctx.setHeader('access-control-allow-methods', 'GET, OPTIONS');
   ctx.setHeader('access-control-allow-headers', 'content-type');
-  ctx.setHeader('access-control-expose-headers', 'x-neo-source, x-neo-lod, x-neo-frame-id, x-neo-point-count, x-neo-byte-count');
+  ctx.setHeader('access-control-expose-headers', 'content-disposition, x-neo-source, x-neo-lod, x-neo-frame-id, x-neo-point-count, x-neo-byte-count');
 }
 
 function json(ctx, data) {
@@ -55,6 +55,26 @@ function binary(ctx, payload) {
     ok: false,
     source: payload.source,
     reason: 'binary response is not supported by this JSH runtime'
+  });
+}
+
+function zipBinary(ctx, payload) {
+  setApiHeaders(ctx);
+  if (!payload || !payload.ok || !payload.bytes) return json(ctx, payload || { ok: false, reason: 'empty export payload' });
+  const filename = String(payload.filename || 'humanoid-sensors.zip').replace(/"/g, '');
+  ctx.setHeader('content-disposition', `attachment; filename="${filename}"`);
+  ctx.setHeader('x-neo-source', String(payload.source || ''));
+  ctx.setHeader('x-neo-byte-count', String(payload.byteCount != null ? payload.byteCount : payload.bytes.length || 0));
+
+  for (const name of ['data', 'Data']) {
+    try {
+      if (typeof ctx[name] === 'function') return ctx[name](http.status.OK, 'application/zip', payload.bytes);
+    } catch (_) {}
+  }
+  return json(ctx, {
+    ok: false,
+    source: payload.source,
+    reason: 'zip response is not supported by this JSH runtime'
   });
 }
 
@@ -102,6 +122,8 @@ function main() {
   server.get('/api/frame', (ctx) => json(ctx, frame(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'dataset', 'sequence']))));
   server.get('/api/points', (ctx) => json(ctx, points(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'lod', 'dataset', 'sequence']))));
   server.get('/api/points.bin', (ctx) => binary(ctx, pointsBinary(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'lod', 'dataset', 'sequence']))));
+  server.get('/api/export/timeline-query', (ctx) => json(ctx, timelineQueryLink(args, queryFromCtx(ctx, ['episode', 'dataset', 'sequence', 'machbaseBase', 'machbaseHttpBase', 'machbase-base', 'machbase-http-base']))));
+  server.get('/api/export/episode.zip', (ctx) => zipBinary(ctx, episodeExportZip(args, queryFromCtx(ctx, ['episode', 'dataset', 'sequence', 'machbaseBase', 'machbaseHttpBase', 'machbase-base', 'machbase-http-base']))));
 
   server.serve((result) => {
     println('neo-humanoid-demo server started', result.network, result.address);

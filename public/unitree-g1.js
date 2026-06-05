@@ -36,6 +36,7 @@ const ARM_JOINTS = [
   'right_wrist_pitch_joint',
   'right_wrist_yaw_joint'
 ];
+const FLOOR_Z = 0;
 
 function array(value) {
   return Array.isArray(value) ? value : [];
@@ -195,13 +196,24 @@ function buildJoints(robot, links) {
   return { joints, childLinks };
 }
 
-function fitFeetToFloor(root) {
+function fitFeetToFloor(root, contactLinks) {
+  for (let pass = 0; pass < 3; pass++) {
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    const contacts = array(contactLinks);
+    if (contacts.length) {
+      for (let i = 0; i < contacts.length; i++) {
+        if (contacts[i]) box.expandByObject(contacts[i]);
+      }
+    } else {
+      box.setFromObject(root);
+    }
+    if (!Number.isFinite(box.min.z)) return;
+    const delta = FLOOR_Z - box.min.z;
+    if (Math.abs(delta) < 0.0005) return;
+    root.position.z += delta;
+  }
   root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
-  if (!Number.isFinite(box.min.z)) return;
-  const parentWorld = new THREE.Vector3();
-  if (root.parent) root.parent.getWorldPosition(parentWorld);
-  root.position.z += parentWorld.z + 0.018 - box.min.z;
 }
 
 export function createUnitreeG1Model() {
@@ -211,6 +223,7 @@ export function createUnitreeG1Model() {
     root: root,
     state: state,
     joints: {},
+    contactLinks: [],
     update: (payload) => {
       const joints = payload && payload.joints || {};
       const leg = array(joints.leg);
@@ -221,6 +234,7 @@ export function createUnitreeG1Model() {
       for (let i = 0; i < ARM_JOINTS.length; i++) {
         model.setJoint(ARM_JOINTS[i], numberAt(arm, i, 0));
       }
+      fitFeetToFloor(root, model.contactLinks);
     },
     setJoint: (name, value) => {
       const joint = model.joints[name];
@@ -259,8 +273,12 @@ export function createUnitreeG1Model() {
         }
       }
       root.add(links[rootName]);
+      model.contactLinks = [
+        links.left_ankle_roll_link,
+        links.right_ankle_roll_link
+      ].filter(Boolean);
       return Promise.all(pendingLoads).then(() => {
-        fitFeetToFloor(root);
+        fitFeetToFloor(root, model.contactLinks);
         state.ready = true;
       });
     })

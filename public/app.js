@@ -7,6 +7,8 @@ const timeline = document.getElementById('timeline');
 const playButton = document.getElementById('playButton');
 const taskSelect = document.getElementById('taskSelect');
 const episodeSelect = document.getElementById('episodeSelect');
+const downloadSensorsLink = document.getElementById('downloadSensorsLink');
+const copyQueryButton = document.getElementById('copyQueryButton');
 const prevEpisodeButton = document.getElementById('prevEpisodeButton');
 const nextEpisodeButton = document.getElementById('nextEpisodeButton');
 const datasetLabel = document.getElementById('datasetLabel');
@@ -47,12 +49,15 @@ const sensorButtons = Array.from(document.querySelectorAll('[data-sensor]'));
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-renderer.setClearColor(0x0f1214, 1);
+renderer.setClearColor(0xf7f8f6, 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.06;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0f1214, 35, 120);
+scene.background = new THREE.Color(0xf7f8f6);
+scene.fog = new THREE.Fog(0xf7f8f6, 38, 120);
 
 const camera = new THREE.PerspectiveCamera(56, 1, 0.05, 300);
 camera.position.set(3.7, -6.4, 3.0);
@@ -70,17 +75,97 @@ controls.addEventListener('start', () => {
   cameraAutoFollow = false;
 });
 
-const floor = new THREE.GridHelper(56, 28, 0x34454d, 0x20282d);
+const studio = new THREE.Group();
+scene.add(studio);
+
+function studioMaterial(color, roughness, metalness) {
+  return new THREE.MeshStandardMaterial({ color, roughness: roughness == null ? 0.62 : roughness, metalness: metalness == null ? 0.02 : metalness });
+}
+
+function studioBox(name, sx, sy, sz, x, y, z, mat) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+  mesh.name = name;
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  studio.add(mesh);
+  return mesh;
+}
+
+function studioCylinder(name, radius, height, x, y, z, mat) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 32), mat);
+  mesh.name = name;
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  studio.add(mesh);
+  return mesh;
+}
+
+const matStudioFloor = studioMaterial(0xf1f4f2, 0.78, 0.0);
+const matStudioWall = new THREE.MeshBasicMaterial({ color: 0xf9faf7, side: THREE.DoubleSide });
+const matStudioTable = studioMaterial(0xd8e1df, 0.58, 0.05);
+const matStudioLeg = studioMaterial(0x8fa2a0, 0.42, 0.18);
+const matStudioTeal = studioMaterial(0x69c7b7, 0.55, 0.03);
+const matStudioBlue = studioMaterial(0x9ec5e8, 0.55, 0.03);
+const matStudioWarm = studioMaterial(0xf1c36b, 0.56, 0.02);
+const matStudioGraphite = studioMaterial(0x46585e, 0.48, 0.18);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(58, 58), matStudioFloor);
+ground.name = 'studioGround';
+ground.position.z = 0;
+ground.receiveShadow = true;
+studio.add(ground);
+
+const backWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 5.2), matStudioWall);
+backWall.name = 'studioBackWall';
+backWall.rotation.x = Math.PI / 2;
+backWall.position.set(0, 6.45, 2.58);
+studio.add(backWall);
+
+const floor = new THREE.GridHelper(56, 28, 0xc8d6d3, 0xe6ecea);
 floor.rotation.x = Math.PI / 2;
+floor.position.z = 0.004;
+const floorMaterials = Array.isArray(floor.material) ? floor.material : [floor.material];
+for (let i = 0; i < floorMaterials.length; i++) {
+  floorMaterials[i].transparent = true;
+  floorMaterials[i].opacity = 0.62;
+}
 scene.add(floor);
 
-scene.add(new THREE.AmbientLight(0x8fa7b5, 0.85));
+studioBox('rearWorkTableTop', 1.65, 0.58, 0.11, -2.35, 3.05, 0.74, matStudioTable);
+studioBox('rearWorkTableLegA', 0.07, 0.07, 0.68, -3.06, 2.82, 0.34, matStudioLeg);
+studioBox('rearWorkTableLegB', 0.07, 0.07, 0.68, -1.64, 2.82, 0.34, matStudioLeg);
+studioBox('rearWorkTableLegC', 0.07, 0.07, 0.68, -3.06, 3.28, 0.34, matStudioLeg);
+studioBox('rearWorkTableLegD', 0.07, 0.07, 0.68, -1.64, 3.28, 0.34, matStudioLeg);
+studioBox('bookStackA', 0.48, 0.34, 0.05, -2.6, 3.03, 0.84, matStudioBlue);
+studioBox('bookStackB', 0.52, 0.31, 0.045, -2.58, 3.03, 0.895, matStudioWarm);
+studioBox('bookStackC', 0.44, 0.36, 0.042, -2.56, 3.03, 0.947, matStudioTeal);
+studioBox('sensorCase', 0.72, 0.52, 0.38, 2.55, 3.05, 0.19, matStudioTeal);
+studioBox('calibrationBlockLow', 0.42, 0.42, 0.24, 2.0, 1.85, 0.12, matStudioWarm);
+studioBox('calibrationBlockHigh', 0.34, 0.34, 0.46, 2.48, 1.72, 0.23, matStudioBlue);
+studioCylinder('floorBeaconA', 0.13, 0.24, -2.85, 0.75, 0.13, matStudioGraphite);
+studioCylinder('floorBeaconB', 0.13, 0.24, 2.95, -0.25, 0.13, matStudioGraphite);
+studioBox('chargingPanel', 0.82, 0.1, 1.35, 3.15, 4.15, 0.78, matStudioGraphite);
+
+scene.add(new THREE.AmbientLight(0xf0f6f4, 1.25));
 const key = new THREE.DirectionalLight(0xffffff, 2.0);
 key.position.set(18, -22, 34);
+key.castShadow = true;
+key.shadow.mapSize.width = 2048;
+key.shadow.mapSize.height = 2048;
+key.shadow.camera.left = -7;
+key.shadow.camera.right = 7;
+key.shadow.camera.top = 7;
+key.shadow.camera.bottom = -7;
 scene.add(key);
-const side = new THREE.DirectionalLight(0x22c7a5, 0.8);
+const side = new THREE.DirectionalLight(0x9bcfc6, 0.6);
 side.position.set(-18, 12, 14);
 scene.add(side);
+const softFill = new THREE.DirectionalLight(0xfff0d0, 0.42);
+softFill.position.set(8, 10, 7);
+scene.add(softFill);
 
 const robotRoot = new THREE.Group();
 scene.add(robotRoot);
@@ -167,6 +252,10 @@ function shellPart(name, radius, mat) {
 }
 
 function addProceduralMesh(mesh) {
+  const mat = mesh.material;
+  const lowOpacity = mat && mat.transparent && Number(mat.opacity) < 0.2;
+  mesh.castShadow = !lowOpacity;
+  mesh.receiveShadow = true;
   proceduralMeshes.push(mesh);
   robotRoot.add(mesh);
   return mesh;
@@ -264,6 +353,12 @@ unitreeG1Model = createUnitreeG1Model();
 robotRoot.add(unitreeG1Model.root);
 unitreeG1Model.ready.then(() => {
   officialRobotVisualReady = true;
+  unitreeG1Model.root.traverse((child) => {
+    if (child && child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
   setProceduralVisible(false);
   unitreeG1Model.root.visible = true;
   if (currentPayload) unitreeG1Model.update(currentPayload);
@@ -297,15 +392,28 @@ let loadingPoints = false;
 let currentShownPoints = 0;
 let lastQueryMs = 0;
 let viewGeneration = 0;
+let pendingCameraReset = false;
 const PLAYBACK_FETCH_INTERVAL_MS = 66;
 const POINT_FETCH_INTERVAL_MS = 600;
 const FRAME_CACHE_LIMIT = 180;
 const SENSOR_HISTORY_LIMIT = 180;
+const FLOOR_Z = 0;
 const frameCache = new Map();
 const pointCache = new Map();
 const sensorHistory = [];
 let activeSensorChart = '';
 let lastChartDrawAt = 0;
+const VISUAL_HEADING_MIN_DISTANCE_M = 0.12;
+const episodeVisualTransform = {
+  originX: 0,
+  originY: 0,
+  forwardX: 0,
+  forwardY: 1,
+  yawOffset: 0,
+  baseYaw: 0,
+  ready: false,
+  headingReady: false
+};
 
 function apiBase() {
   const query = new URLSearchParams(window.location.search).get('apiBase');
@@ -315,6 +423,12 @@ function apiBase() {
 }
 
 const API_BASE = apiBase();
+
+function machbaseHttpBase() {
+  const protocol = window.location.protocol || 'http:';
+  const host = window.location.hostname || '127.0.0.1';
+  return `${protocol}//${host}:5654`;
+}
 
 async function json(path) {
   const res = await fetch(`${API_BASE}${path}`);
@@ -388,6 +502,80 @@ function phase(payload) {
   return Number(payload && payload.frame && payload.frame.frameId || 0) / 30;
 }
 
+function rawFramePosition(frame) {
+  const position = frame && frame.position || {};
+  return {
+    x: Number(position.x || 0),
+    y: Number(position.y || 0),
+    z: Number(position.z || 0)
+  };
+}
+
+function resetVisualTransform() {
+  episodeVisualTransform.originX = 0;
+  episodeVisualTransform.originY = 0;
+  episodeVisualTransform.forwardX = 0;
+  episodeVisualTransform.forwardY = 1;
+  episodeVisualTransform.yawOffset = 0;
+  episodeVisualTransform.baseYaw = 0;
+  episodeVisualTransform.ready = false;
+  episodeVisualTransform.headingReady = false;
+}
+
+function configureVisualTransform(startFrame, endFrame) {
+  const start = rawFramePosition(startFrame);
+  const end = rawFramePosition(endFrame || startFrame);
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  episodeVisualTransform.originX = start.x;
+  episodeVisualTransform.originY = start.y;
+  episodeVisualTransform.ready = true;
+  if (distance > VISUAL_HEADING_MIN_DISTANCE_M) {
+    episodeVisualTransform.forwardX = dx / distance;
+    episodeVisualTransform.forwardY = dy / distance;
+    episodeVisualTransform.yawOffset = Math.PI / 2 - Math.atan2(episodeVisualTransform.forwardY, episodeVisualTransform.forwardX);
+    episodeVisualTransform.baseYaw = Number(startFrame && startFrame.rotation && startFrame.rotation.yaw || 0) + episodeVisualTransform.yawOffset;
+    episodeVisualTransform.headingReady = true;
+  } else {
+    episodeVisualTransform.forwardX = 0;
+    episodeVisualTransform.forwardY = 1;
+    episodeVisualTransform.yawOffset = 0;
+    episodeVisualTransform.baseYaw = 0;
+    episodeVisualTransform.headingReady = false;
+  }
+}
+
+function visualFramePosition(frame) {
+  const position = rawFramePosition(frame);
+  if (!episodeVisualTransform.ready) {
+    episodeVisualTransform.originX = position.x;
+    episodeVisualTransform.originY = position.y;
+    episodeVisualTransform.ready = true;
+  }
+  const dx = position.x - episodeVisualTransform.originX;
+  const dy = position.y - episodeVisualTransform.originY;
+  const fx = episodeVisualTransform.forwardX;
+  const fy = episodeVisualTransform.forwardY;
+  return {
+    x: episodeVisualTransform.headingReady ? dx * fy - dy * fx : dx,
+    y: episodeVisualTransform.headingReady ? dx * fx + dy * fy : dy,
+    z: FLOOR_Z
+  };
+}
+
+function visualFrameYaw(frame) {
+  const rotation = frame && frame.rotation || {};
+  const yaw = Number(rotation.yaw || 0);
+  const normalized = yaw + episodeVisualTransform.yawOffset;
+  return episodeVisualTransform.headingReady ? normalized - episodeVisualTransform.baseYaw : normalized;
+}
+
+function followCameraOffset(yaw) {
+  if (episodeVisualTransform.headingReady) return new THREE.Vector3(0, -6.2, 2.8);
+  return new THREE.Vector3(3.5, -5.8, 2.8).applyAxisAngle(new THREE.Vector3(0, 0, 1), yaw);
+}
+
 function poseFromPayload(payload) {
   const t = phase(payload);
   const armSwing = Math.sin(t * 1.8) * 0.32;
@@ -419,13 +607,20 @@ function poseFromPayload(payload) {
   const leftAnkle = leftKneePos.clone().add(vec(0, Math.sin(leftHipPitch + leftKnee) * 0.15, -0.42 * Math.cos(leftHipPitch + leftKnee)));
   const rightAnkle = rightKneePos.clone().add(vec(0, Math.sin(rightHipPitch + rightKnee) * 0.15, -0.42 * Math.cos(rightHipPitch + rightKnee)));
 
-  return {
+  const pose = {
     pelvis, chest, neck, head,
     leftShoulder, leftElbow: leftElbowPos, leftWrist,
     rightShoulder, rightElbow: rightElbowPos, rightWrist,
     leftHip, leftKnee: leftKneePos, leftAnkle,
     rightHip, rightKnee: rightKneePos, rightAnkle
   };
+  const footBottom = Math.min(pose.leftAnkle.z - 0.0875, pose.rightAnkle.z - 0.0875);
+  if (Number.isFinite(footBottom) && Math.abs(footBottom) > 0.0001) {
+    Object.keys(pose).forEach(name => {
+      pose[name].z -= footBottom;
+    });
+  }
+  return pose;
 }
 
 function setBone(mesh, a, b) {
@@ -448,10 +643,10 @@ function placeFingers(meshes, wrist, side) {
 
 function updateRobot(payload) {
   const frame = payload.frame || {};
-  const position = frame.position || {};
+  const position = visualFramePosition(frame);
   const rotation = frame.rotation || {};
-  robotRoot.position.set(Number(position.x || 0), Number(position.y || 0), Number(position.z || 0));
-  robotRoot.rotation.set(Number(rotation.roll || 0), Number(rotation.pitch || 0), Number(rotation.yaw || 0));
+  robotRoot.position.set(position.x, position.y, position.z);
+  robotRoot.rotation.set(Number(rotation.roll || 0), Number(rotation.pitch || 0), visualFrameYaw(frame));
 
   const p = poseFromPayload(payload);
   Object.keys(jointMeshes).forEach(name => jointMeshes[name].position.copy(p[name]));
@@ -600,8 +795,8 @@ function updatePointCloud(buffer) {
 }
 
 function updateTrail(frame) {
-  const p = frame.position || {};
-  const point = new THREE.Vector3(Number(p.x || 0), Number(p.y || 0), Number(p.z || 0.04));
+  const p = visualFramePosition(frame);
+  const point = new THREE.Vector3(p.x, p.y, FLOOR_Z + 0.04);
   if (trailPoints.length === 0 || trailPoints[trailPoints.length - 1].distanceTo(point) > 0.035) {
     trailPoints.push(point);
     if (trailPoints.length > 600) trailPoints.shift();
@@ -613,16 +808,16 @@ function drawTrace(frame) {
   const w = traceMap.width;
   const h = traceMap.height;
   traceCtx.clearRect(0, 0, w, h);
-  traceCtx.fillStyle = 'rgba(7, 10, 12, 0.72)';
+  traceCtx.fillStyle = 'rgba(255, 255, 255, 0.76)';
   traceCtx.fillRect(0, 0, w, h);
-  traceCtx.strokeStyle = 'rgba(150, 165, 173, 0.22)';
+  traceCtx.strokeStyle = 'rgba(98, 119, 124, 0.22)';
   traceCtx.lineWidth = 1;
   for (let r = 0.25; r <= 1; r += 0.25) {
     traceCtx.beginPath();
     traceCtx.arc(w / 2, h / 2, r * Math.min(w, h) * 0.44, 0, Math.PI * 2);
     traceCtx.stroke();
   }
-  const center = frame.position || { x: 0, y: 0 };
+  const center = visualFramePosition(frame);
   const scale = Math.min(w, h) * 0.44 / 2.2;
   traceCtx.strokeStyle = '#f0b84a';
   traceCtx.lineWidth = 2;
@@ -649,7 +844,7 @@ function drawImu(payload) {
   const pitch = Number.isFinite(Number(rpy[1])) ? Number(rpy[1]) : Number(rotation.pitch || 0);
   const yaw = Number.isFinite(Number(rpy[2])) ? Number(rpy[2]) : Number(rotation.yaw || 0);
   imuCtx.clearRect(0, 0, w, h);
-  imuCtx.fillStyle = 'rgba(7, 10, 12, 0.72)';
+  imuCtx.fillStyle = 'rgba(255, 255, 255, 0.76)';
   imuCtx.fillRect(0, 0, w, h);
   imuCtx.save();
   imuCtx.translate(w / 2, h / 2);
@@ -659,14 +854,14 @@ function drawImu(payload) {
   imuCtx.fillRect(-w, -h + pitchOffset, w * 2, h);
   imuCtx.fillStyle = 'rgba(240, 184, 74, 0.22)';
   imuCtx.fillRect(-w, pitchOffset, w * 2, h);
-  imuCtx.strokeStyle = '#eef4f7';
+  imuCtx.strokeStyle = '#172326';
   imuCtx.lineWidth = 2;
   imuCtx.beginPath();
   imuCtx.moveTo(-58, pitchOffset);
   imuCtx.lineTo(58, pitchOffset);
   imuCtx.stroke();
   imuCtx.restore();
-  imuCtx.strokeStyle = 'rgba(238, 244, 247, 0.32)';
+  imuCtx.strokeStyle = 'rgba(98, 119, 124, 0.28)';
   imuCtx.beginPath();
   imuCtx.arc(w / 2, h / 2, 28, 0, Math.PI * 2);
   imuCtx.stroke();
@@ -816,7 +1011,7 @@ function chartSpec(type) {
         { key: 'roll', label: 'roll', color: '#79b8ff', value: s => s.imu.roll },
         { key: 'pitch', label: 'pitch', color: '#22c7a5', value: s => s.imu.pitch },
         { key: 'yaw', label: 'yaw', color: '#f0b84a', value: s => s.imu.yaw },
-        { key: 'gyro', label: 'gyro', color: '#d5dde3', value: s => s.imu.gyro }
+        { key: 'gyro', label: 'gyro', color: '#50646a', value: s => s.imu.gyro }
       ]
     };
   }
@@ -838,7 +1033,7 @@ function chartSpec(type) {
         { key: 'speed', label: 'speed', color: '#22c7a5', value: s => s.odometry.speed },
         { key: 'x', label: 'x', color: '#79b8ff', value: s => s.odometry.x },
         { key: 'y', label: 'y', color: '#f0b84a', value: s => s.odometry.y },
-        { key: 'yaw', label: 'yaw', color: '#d5dde3', value: s => s.odometry.yaw }
+        { key: 'yaw', label: 'yaw', color: '#50646a', value: s => s.odometry.yaw }
       ]
     };
   }
@@ -879,14 +1074,14 @@ function chartSpec(type) {
       { key: 'activity', label: 'all joints', color: '#22c7a5', value: s => s.joints.activity },
       { key: 'arm', label: 'arms', color: '#79b8ff', value: s => s.joints.arm },
       { key: 'leg', label: 'legs', color: '#f0b84a', value: s => s.joints.leg },
-      { key: 'hand', label: 'hands', color: '#d5dde3', value: s => s.joints.hand }
+      { key: 'hand', label: 'hands', color: '#50646a', value: s => s.joints.hand }
     ]
   };
 }
 
 function drawLineChart(ctx, width, height, spec, samples) {
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(7, 10, 12, 0.78)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.84)';
   ctx.fillRect(0, 0, width, height);
   const padLeft = 48;
   const padRight = 18;
@@ -910,10 +1105,10 @@ function drawLineChart(ctx, width, height, spec, samples) {
   const span = max - min;
   min -= span * 0.08;
   max += span * 0.08;
-  ctx.strokeStyle = 'rgba(143, 163, 176, 0.18)';
+  ctx.strokeStyle = 'rgba(98, 119, 124, 0.18)';
   ctx.lineWidth = 1;
   ctx.font = '11px ui-monospace, Menlo, Consolas, monospace';
-  ctx.fillStyle = 'rgba(238, 244, 247, 0.62)';
+  ctx.fillStyle = 'rgba(23, 35, 38, 0.62)';
   for (let i = 0; i <= 4; i++) {
     const y = padTop + plotH * i / 4;
     ctx.beginPath();
@@ -957,7 +1152,7 @@ function drawLineChart(ctx, width, height, spec, samples) {
       }
     }
   }
-  ctx.fillStyle = 'rgba(150, 165, 173, 0.8)';
+  ctx.fillStyle = 'rgba(98, 119, 124, 0.8)';
   const first = samples[0] && samples[0].frameId;
   const last = samples[samples.length - 1] && samples[samples.length - 1].frameId;
   ctx.fillText(`frame ${first == null ? '--' : first}`, padLeft, height - 10);
@@ -1075,10 +1270,38 @@ function rememberPoints(frameId, buffer) {
   pointCache.delete(first);
 }
 
+async function prepareEpisodeVisualTransform(ep, generation) {
+  if (!ep) return;
+  try {
+    const startFrameId = ep.frameStart;
+    const endFrameId = ep.frameEnd;
+    const requests = [json(`/api/frame?frameId=${startFrameId}`)];
+    if (endFrameId !== startFrameId) requests.push(json(`/api/frame?frameId=${endFrameId}`));
+    const results = await Promise.all(requests);
+    const startPayload = results[0];
+    const endPayload = results[1] || startPayload;
+    if (generation !== viewGeneration || selectedEpisode !== ep) return;
+    configureVisualTransform(startPayload.frame || {}, endPayload.frame || startPayload.frame || {});
+    if (currentPayload) {
+      updateRobot(currentPayload);
+      trailPoints.length = 0;
+      trailGeometry.setFromPoints(trailPoints);
+      updateTrail(currentPayload.frame || {});
+      resetCameraToFrame(currentPayload.frame || {});
+    }
+  } catch (err) {
+    console.warn(err && err.message ? err.message : err);
+  }
+}
+
 function applyFrameEntry(entry) {
   currentPayload = entry.payload;
   currentMs = Date.parse(entry.payload.frame && entry.payload.frame.time || '') || currentMs;
   updateRobot(entry.payload);
+  if (pendingCameraReset) {
+    resetCameraToFrame(entry.payload.frame || {});
+    pendingCameraReset = false;
+  }
   updateTrail(entry.payload.frame || {});
   lastQueryMs = entry.queryMs || lastQueryMs;
   updateHud(entry.payload, currentShownPoints, lastQueryMs);
@@ -1193,9 +1416,9 @@ function syncTimeline() {
 
 function followCamera() {
   const frame = currentPayload && currentPayload.frame || {};
-  const pos = frame.position || {};
-  const yaw = frame.rotation && Number(frame.rotation.yaw || 0) || 0;
-  const target = new THREE.Vector3(Number(pos.x || 0), Number(pos.y || 0), Number(pos.z || 0) + 1.1);
+  const pos = visualFramePosition(frame);
+  const yaw = visualFrameYaw(frame);
+  const target = new THREE.Vector3(pos.x, pos.y, pos.z + 1.1);
   if (!cameraAutoFollow) {
     const delta = target.clone().sub(followTarget);
     camera.position.add(delta);
@@ -1203,10 +1426,22 @@ function followCamera() {
     followTarget.copy(target);
     return;
   }
-  const offset = new THREE.Vector3(3.5, -5.8, 2.8).applyAxisAngle(new THREE.Vector3(0, 0, 1), yaw);
+  const offset = followCameraOffset(yaw);
   camera.position.lerp(target.clone().add(offset), 0.08);
   controls.target.lerp(target, 0.12);
   followTarget.copy(controls.target);
+}
+
+function resetCameraToFrame(frame) {
+  const pos = visualFramePosition(frame);
+  const yaw = visualFrameYaw(frame);
+  const target = new THREE.Vector3(pos.x, pos.y, pos.z + 1.1);
+  const offset = followCameraOffset(yaw);
+  camera.position.copy(target).add(offset);
+  controls.target.copy(target);
+  followTarget.copy(target);
+  cameraAutoFollow = true;
+  controls.update();
 }
 
 function resize() {
@@ -1243,11 +1478,14 @@ function animate(now) {
 
 function resetEpisodeView() {
   viewGeneration++;
+  resetVisualTransform();
   trailPoints.length = 0;
   trailGeometry.setFromPoints(trailPoints);
   clearPointCloud();
+  robotRoot.position.z = FLOOR_Z;
   currentPayload = null;
   currentShownPoints = 0;
+  pendingCameraReset = true;
   pendingFrameId = -1;
   lastFetchedFrameId = -1;
   loadingFrame = false;
@@ -1309,6 +1547,11 @@ function populateEpisodes(items) {
     taskMap[key].episodes.push(ep);
     taskMap[key].frameCount += ep.frameCount;
   }
+  taskIndex.sort((a, b) => {
+    const ar = a.category === 'loco_manipulation' ? 0 : 1;
+    const br = b.category === 'loco_manipulation' ? 0 : 1;
+    return ar - br;
+  });
   taskSelect.innerHTML = '';
   for (let i = 0; i < taskIndex.length; i++) {
     const task = taskIndex[i];
@@ -1342,12 +1585,63 @@ function selectEpisode(index, keepPlaying) {
   currentMs = Date.parse(selectedEpisode.minTime || '') || minMs;
   if (!keepPlaying) setPlaying(false);
   resetEpisodeView();
+  prepareEpisodeVisualTransform(selectedEpisode, viewGeneration);
   datasetLabel.textContent = `${manifest.dataset || 'humanoid-everyday'} / ${fmtCount(taskIndex.length || 1)} tasks / ${fmtCount(manifest.frameCount || 0)} frames`;
+  updateExportControls();
   maybeLoadFrame(selectedEpisode.frameStart, true);
 }
 
 function selectedEpisodeIndex() {
   return Math.max(0, episodeIndex.indexOf(selectedEpisode));
+}
+
+function exportParams() {
+  const params = new URLSearchParams();
+  params.set('episode', String(selectedEpisodeIndex()));
+  if (manifest && manifest.dataset) params.set('dataset', manifest.dataset);
+  if (manifest && manifest.sequence) params.set('sequence', manifest.sequence);
+  params.set('machbaseBase', machbaseHttpBase());
+  return params;
+}
+
+function exportPath(endpoint) {
+  return `${endpoint}?${exportParams().toString()}`;
+}
+
+function updateExportControls() {
+  const ready = !!(manifest && selectedEpisode);
+  if (downloadSensorsLink) {
+    downloadSensorsLink.classList.toggle('disabled', !ready);
+    downloadSensorsLink.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    downloadSensorsLink.href = ready ? `${API_BASE}${exportPath('/api/export/episode.zip')}` : '#';
+  }
+  if (copyQueryButton) {
+    copyQueryButton.disabled = !ready;
+    if (ready && copyQueryButton.textContent !== 'Copied') copyQueryButton.textContent = 'Copy query';
+  }
+}
+
+async function copyTimelineQueryLink() {
+  if (!copyQueryButton || !selectedEpisode) return;
+  copyQueryButton.disabled = true;
+  try {
+    const payload = await json(exportPath('/api/export/timeline-query'));
+    const text = payload && (payload.url || payload.sql) || '';
+    if (!payload || !payload.ok || !text) throw new Error(payload && payload.reason || 'query unavailable');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      window.prompt('Machbase NDJSON query link', text);
+    }
+    copyQueryButton.textContent = 'Copied';
+    setTimeout(() => updateExportControls(), 1400);
+  } catch (err) {
+    copyQueryButton.textContent = 'Copy failed';
+    console.warn(err && err.message ? err.message : err);
+    setTimeout(() => updateExportControls(), 1600);
+  } finally {
+    if (selectedEpisode) copyQueryButton.disabled = false;
+  }
 }
 
 function selectedTaskIndex() {
@@ -1400,6 +1694,16 @@ timeline.addEventListener('input', () => {
 episodeSelect.addEventListener('change', () => {
   selectEpisode(parseInt(episodeSelect.value || '0', 10) || 0, false);
 });
+
+if (downloadSensorsLink) {
+  downloadSensorsLink.addEventListener('click', (event) => {
+    if (!selectedEpisode) event.preventDefault();
+  });
+}
+
+if (copyQueryButton) {
+  copyQueryButton.addEventListener('click', copyTimelineQueryLink);
+}
 
 taskSelect.addEventListener('change', () => {
   selectTask(parseInt(taskSelect.value || '0', 10) || 0, false);

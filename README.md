@@ -314,6 +314,8 @@ curl http://127.0.0.1:56802/api/manifest
 curl http://127.0.0.1:56802/api/episodes
 curl 'http://127.0.0.1:56802/api/frame?frameId=100'
 curl 'http://127.0.0.1:56802/api/points?frameId=100&lod=2'
+curl 'http://127.0.0.1:56802/api/export/timeline-query?episode=0'
+curl -D - 'http://127.0.0.1:56802/api/export/episode.zip?episode=0' -o /tmp/neo-humanoid-episode0.zip
 ```
 
 대표 catalog 적재가 끝나면 `/api/episodes`는 `episodeCount: 35`를 반환하고, 각 episode에 `task`, `category`, `robotType`이 포함됩니다.
@@ -333,6 +335,14 @@ x-neo-frame-id
 x-neo-point-count
 x-neo-byte-count
 ```
+
+센서 데이터 다운로드:
+
+- UI의 `Download sensors`는 선택된 episode의 센서 데이터를 ZIP으로 받습니다.
+- UI의 `Copy query`는 같은 episode를 Machbase Neo HTTP API `/db/query`에서 NDJSON으로 받을 수 있는 URL을 복사합니다.
+- ZIP에는 `manifest.json`, `timeline.ndjson`, `lidar.frames.ndjson`, `lidar/*.xyzi.bin`이 포함됩니다.
+- `timeline.ndjson`은 `PHY_TIMELINE`의 한 frame당 한 줄 JSON이고, `lidar/*.xyzi.bin`은 점 하나를 little-endian float32 `x,y,z,intensity` 16 bytes로 저장합니다.
+- 직접 링크는 Machbase Neo HTTP Query API 형식인 `/db/query?q=...&format=ndjson&compress=gzip&timeformat=ns`를 사용합니다. 참고: https://docs.machbase.com/neo/api-http/query/
 
 공간 포인트 downsample 정책:
 

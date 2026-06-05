@@ -104,7 +104,6 @@ function studioCylinder(name, radius, height, x, y, z, mat) {
 }
 
 const matStudioFloor = studioMaterial(0xf1f4f2, 0.78, 0.0);
-const matStudioWall = new THREE.MeshBasicMaterial({ color: 0xf9faf7, side: THREE.DoubleSide });
 const matStudioTable = studioMaterial(0xd8e1df, 0.58, 0.05);
 const matStudioLeg = studioMaterial(0x8fa2a0, 0.42, 0.18);
 const matStudioTeal = studioMaterial(0x69c7b7, 0.55, 0.03);
@@ -117,12 +116,6 @@ ground.name = 'studioGround';
 ground.position.z = 0;
 ground.receiveShadow = true;
 studio.add(ground);
-
-const backWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 5.2), matStudioWall);
-backWall.name = 'studioBackWall';
-backWall.rotation.x = Math.PI / 2;
-backWall.position.set(0, 6.45, 2.58);
-studio.add(backWall);
 
 const floor = new THREE.GridHelper(56, 28, 0xc8d6d3, 0xe6ecea);
 floor.rotation.x = Math.PI / 2;
@@ -147,7 +140,6 @@ studioBox('calibrationBlockLow', 0.42, 0.42, 0.24, 2.0, 1.85, 0.12, matStudioWar
 studioBox('calibrationBlockHigh', 0.34, 0.34, 0.46, 2.48, 1.72, 0.23, matStudioBlue);
 studioCylinder('floorBeaconA', 0.13, 0.24, -2.85, 0.75, 0.13, matStudioGraphite);
 studioCylinder('floorBeaconB', 0.13, 0.24, 2.95, -0.25, 0.13, matStudioGraphite);
-studioBox('chargingPanel', 0.82, 0.1, 1.35, 3.15, 4.15, 0.78, matStudioGraphite);
 
 scene.add(new THREE.AmbientLight(0xf0f6f4, 1.25));
 const key = new THREE.DirectionalLight(0xffffff, 2.0);
@@ -469,6 +461,13 @@ function fmtDuration(ms) {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
   return minutes > 0 ? `${minutes}:${String(rest).padStart(2, '0')}` : `${rest}s`;
+}
+
+function fmtTimestamp(value, fallbackMs) {
+  const text = value ? String(value) : new Date(fallbackMs).toISOString();
+  return text.replace(/(\d{2}:\d{2}:\d{2})(?:\.(\d+))?(\s+[+-]\d{4}\s+UTC|Z\b)/, (_, hms, frac, suffix) => {
+    return `${hms}.${String(frac || '').padEnd(3, '0').slice(0, 3)}${suffix}`;
+  });
 }
 
 function clamp(value, min, max) {
@@ -1241,7 +1240,7 @@ function updateHud(payload, shownPoints, queryMs) {
   setSensorState(rgbStatus, rgbActive || hasManifestSensor('rgb'), rgbActive ? 'streaming' : 'available');
   setSensorState(depthStatus, depthActive || hasManifestSensor('depth'), depthActive ? 'streaming' : 'available');
   setSensorState(lidarStatus, lidarActive || hasManifestSensor('lidar'), lidarActive ? 'streaming' : 'available');
-  timeLabel.textContent = frame.time || new Date(currentMs).toISOString();
+  timeLabel.textContent = fmtTimestamp(frame.time, currentMs);
   queryLabel.textContent = `${Math.round(queryMs)} ms Machbase query`;
   sourceLabel.textContent = payload.source === 'machbase' ? 'Machbase Neo live query' : 'synthetic fallback';
   drawImu(payload);

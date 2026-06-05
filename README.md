@@ -126,7 +126,64 @@ LIMIT=1              START_AT부터 지정 개수만 처리
 START_AT=10          catalog index 10부터 시작
 ```
 
-## 3. 압축 해제 결과
+## 3. OpenHE 모션 데이터 추가
+
+선택 데이터셋:
+
+```text
+OpenHE Unitree G1 Retargeted Motion Dataset
+https://huggingface.co/datasets/openhe/g1-retargeted-motions
+```
+
+OpenHE 데이터는 Unitree G1용 30 FPS retargeted motion `.pkl` 파일입니다. 원본에는 LiDAR/RGB/depth가 없고, root pose, quaternion, 23 DOF joint, foot contact가 들어 있습니다. 이 데모에서는 Linux shell에서 `.pkl`을 내려받아 기존 `data.json` episode 구조로 변환한 뒤, JSH ingest로 timeline에 append합니다.
+
+Linux shell:
+
+```sh
+cd <NEO_HOME>/public/neo-humanoid-demo
+scripts/prepare-openhe-motion.sh lafan1_retargeted/walk1_subject1.pkl
+```
+
+기본 출력:
+
+```text
+data/raw/openhe/g1-retargeted-motions/lafan1_retargeted/walk1_subject1.pkl
+data/raw/openhe-converted/openhe_walk1_subject1/episode_0/data.json
+```
+
+스크립트는 `/tmp/neo-openhe-venv`에 Python venv를 만들고 `numpy`, `joblib`을 설치해 pickle을 변환합니다. task prefix는 기본값 `openhe`이며, 필요하면 `TASK_PREFIX=<prefix>`로 바꿀 수 있습니다.
+
+JSH shell에서 기존 sequence 뒤에 이어 붙입니다:
+
+```text
+/work > ./scripts/ingest.js \
+  --data-root data/raw/openhe-converted \
+  --dataset humanoid-everyday \
+  --sequence humanoid-everyday-10m \
+  --minutes 0 \
+  --append \
+  --flush-every 500 \
+  --point-frame-stride 999999
+```
+
+주의: `--append`는 현재 sequence의 마지막 `frame_id/time` 뒤에 새 frame을 이어 붙입니다. 같은 변환 데이터를 반복 실행하면 같은 motion이 다시 append되므로, 재구성하려면 `./scripts/reset-schema.js` 후 기본 Humanoid Everyday ingest부터 다시 실행합니다.
+
+이번 OpenHE 로컬 추가 검증 결과:
+
+```text
+source: openhe/g1-retargeted-motions lafan1_retargeted/walk1_subject1.pkl
+task: openhe_walk1_subject1
+frames: 7840
+durationMinutes: 4.36
+pointFrames: 0
+sequence frameCount: 23645
+episodeCount: 36
+frame range: 15805..23644
+```
+
+OpenHE motion은 UI의 `Motion` select에 `openhe_motion / openhe_walk1_subject1`로 표시됩니다. LiDAR point는 원본에 없으므로 센서 패널에서 `0 points`로 표시되는 것이 정상입니다.
+
+## 4. 압축 해제 결과
 
 전체 ZIP을 모두 보관하거나 풀면 매우 큰 공간이 필요합니다. 위 준비 스크립트는 각 대표 task에서 `data.json`이 있는 첫 번째 episode prefix만 찾아 표준 위치로 옮깁니다.
 
@@ -141,7 +198,7 @@ data/raw/humanoid-everyday/<task>/episode_0/lidar/*.pcd
 
 `data.json`은 배열이거나 `data`, `steps`, `frames`, `episode` 중 하나의 배열 필드를 포함할 수 있습니다. 각 step에서 가능한 센서 필드를 읽고, 파일 경로가 명시되지 않은 RGB/depth/LiDAR는 `color/`, `depth/`, `lidar/` 디렉토리의 정렬 순서를 frame index에 맞춰 사용합니다.
 
-## 4. 데이터 확인
+## 5. 데이터 확인
 
 JSH shell:
 
@@ -176,7 +233,7 @@ media.rgb: 16444
 media.depth: 16444
 ```
 
-## 5. 스키마 생성
+## 6. 스키마 생성
 
 JSH shell:
 
@@ -212,7 +269,7 @@ PHY_POINT_FRAME
 /work > ./scripts/reset-schema.js
 ```
 
-## 6. 데이터 적재
+## 7. 데이터 적재
 
 대표 catalog만 적재합니다. 각 task에서 첫 번째 episode 1개만 사용하고, 로봇 timeline은 모든 프레임을 저장하되 LiDAR point cloud는 10프레임마다 저장합니다.
 
@@ -257,7 +314,7 @@ PHY_POINT_FRAME
 }
 ```
 
-`sourceEpisodes`는 raw 디렉토리에서 발견한 전체 episode 수입니다. 현재 로컬 raw에는 기존 샘플까지 남아 있어 37이고, API와 UI에는 `--catalog-only`로 적재된 35개 episode가 표시됩니다.
+`sourceEpisodes`는 raw 디렉토리에서 발견한 전체 episode 수입니다. 현재 로컬 raw에는 기존 샘플까지 남아 있어 37이고, 기본 Humanoid Everyday ingest 직후 API와 UI에는 `--catalog-only`로 적재된 35개 episode가 표시됩니다. OpenHE append까지 실행하면 API와 UI에는 36개 episode가 표시됩니다.
 
 기본 dataset/sequence:
 
@@ -277,7 +334,7 @@ intensity float32
 
 PCD에 intensity 필드가 없으면 `1.0`으로 저장합니다.
 
-## 7. 데모 서버 실행
+## 8. 데모 서버 실행
 
 JSH shell:
 
@@ -318,7 +375,7 @@ curl 'http://127.0.0.1:56802/api/export/timeline-query?episode=0'
 curl -D - 'http://127.0.0.1:56802/api/export/episode.zip?episode=0' -o /tmp/neo-humanoid-episode0.zip
 ```
 
-대표 catalog 적재가 끝나면 `/api/episodes`는 `episodeCount: 35`를 반환하고, 각 episode에 `task`, `category`, `robotType`이 포함됩니다.
+대표 catalog 적재가 끝나면 `/api/episodes`는 `episodeCount: 35`를 반환하고, OpenHE append까지 끝나면 `episodeCount: 36`을 반환합니다. 각 episode에는 `task`, `category`, `robotType`이 포함됩니다.
 
 `/api/points.bin`은 browser UI가 우선 사용하는 binary endpoint입니다.
 
@@ -352,7 +409,7 @@ LOD 1: 4개 중 1개 point 사용
 LOD 2: 12개 중 1개 point 사용
 ```
 
-DB에는 LOD별 데이터를 따로 저장하지 않고, API가 요청 시 downsample합니다. `--point-frame-stride`로 일부 프레임에만 LiDAR를 저장한 경우 `/api/points.bin`은 요청 프레임 이전의 가장 가까운 point frame을 재사용합니다.
+DB에는 LOD별 데이터를 따로 저장하지 않고, API가 요청 시 downsample합니다. `--point-frame-stride`로 일부 프레임에만 LiDAR를 저장한 경우 `/api/points.bin`은 같은 episode 안에서 요청 프레임 이전의 가장 가까운 point frame을 재사용합니다. OpenHE처럼 원본에 LiDAR가 없는 episode는 `0 points`를 반환합니다.
 
 ## 화면 구성
 

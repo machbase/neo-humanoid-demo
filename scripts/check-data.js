@@ -22,9 +22,9 @@ function countMedia(episodes, root) {
     const episode = episodes[e];
     for (let i = 0; i < episode.steps.length; i++) {
       const media = stepMedia(episode.dir, episode.steps[i] || {}, i);
-      if (exists(media.lidar)) out.lidar++;
-      if (exists(media.rgb)) out.rgb++;
-      if (exists(media.depth)) out.depth++;
+      if (media.lidar && exists(media.lidar)) out.lidar++;
+      if (media.rgb && exists(media.rgb)) out.rgb++;
+      if (media.depth && exists(media.depth)) out.depth++;
     }
   }
   return out;

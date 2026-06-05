@@ -18,6 +18,19 @@ function closeQuietly(obj) {
   try { obj && obj.close && obj.close(); } catch (_) {}
 }
 
+function rowValue(row, name) {
+  if (!row) return undefined;
+  return row[name] != null ? row[name] : row[name.toUpperCase()];
+}
+
+function toEpochMs(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  if (value == null) return NaN;
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
 function stripRobotSuffix(name) {
   return String(name || '').replace(/_(g1|h1)$/i, '');
 }
@@ -51,6 +64,30 @@ function taskName(episodeName) {
   return String(episodeName || '').split('/')[0] || '';
 }
 
+function appendTarget(conn, dataset, sequence) {
+  let rows;
+  try {
+    rows = conn.query(
+      `SELECT MAX(frame_id) max_frame_id, MAX(time) max_time, COUNT(*) row_count FROM ${TABLES.timeline} WHERE dataset = ? AND sequence = ?`,
+      dataset,
+      sequence
+    );
+    for (const row of rows) {
+      const count = Number(rowValue(row, 'row_count') || 0);
+      if (count <= 0) return null;
+      const maxFrameId = Number(rowValue(row, 'max_frame_id') || 0);
+      const maxTimeMs = toEpochMs(rowValue(row, 'max_time'));
+      return {
+        frameId: Math.max(0, maxFrameId + 1),
+        baseTime: Number.isFinite(maxTimeMs) ? maxTimeMs + Math.round(1000 / FRAME_RATE_HZ) : NaN
+      };
+    }
+  } finally {
+    closeQuietly(rows);
+  }
+  return null;
+}
+
 function main() {
   const args = parseArgs(process.argv);
   const dataRoot = resolveProjectPath(args.dataRoot || args['data-root'], 'data/raw/humanoid-everyday', ROOT);
@@ -62,6 +99,8 @@ function main() {
   const episodeLimitPerTask = intArg(args.episodeLimitPerTask || args['episode-limit-per-task'], 0);
   const pointStride = Math.max(1, intArg(args.pointStride || args['point-stride'], 1));
   const pointFrameStride = Math.max(1, intArg(args.pointFrameStride || args['point-frame-stride'], 1));
+  const startFrameId = Math.max(0, intArg(args.startFrameId || args['start-frame-id'], 0));
+  const append = !!args.append;
   const catalogFile = resolveProjectPath(args.catalog, 'data/catalog/humanoid-category-tasks.json', ROOT);
   const catalog = readCatalog(catalogFile);
   const catalogOnly = !!(args.catalogOnly || args['catalog-only']);
@@ -78,7 +117,7 @@ function main() {
   let frameCount = 0;
   let pointFrames = 0;
   let elapsedMs = 0;
-  let globalFrameId = 0;
+  let globalFrameId = startFrameId;
 
   try {
     conn = db.connect();
@@ -86,7 +125,15 @@ function main() {
     timelineAppender = conn.append(TABLES.timeline);
     pointAppender = conn.append(TABLES.points);
 
-    const baseTime = Date.parse(args.baseTime || args['base-time'] || '2026-01-01T00:00:00Z');
+    let baseTime = Date.parse(args.baseTime || args['base-time'] || '2026-01-01T00:00:00Z');
+    if (append) {
+      const target = appendTarget(conn, dataset, sequence);
+      if (target) {
+        globalFrameId = target.frameId;
+        if (Number.isFinite(target.baseTime)) baseTime = target.baseTime;
+        println('append target', dataset, sequence, 'frameId', globalFrameId, 'baseTime', new Date(baseTime).toISOString());
+      }
+    }
     let remaining = limit > 0 ? limit : 0;
     const loadedByTask = {};
 
@@ -96,7 +143,8 @@ function main() {
       const episode = info.episodes[e];
       const sourceTask = taskName(episode.name);
       const meta = catalog[sourceTask] || null;
-      const task = meta && meta.task || sourceTask;
+      const firstStep = episode.steps[0] || {};
+      const task = meta && meta.task || firstStep.task || sourceTask;
       if (catalogOnly && !meta) continue;
       loadedByTask[task] = loadedByTask[task] || 0;
       if (episodeLimitPerTask > 0 && loadedByTask[task] >= episodeLimitPerTask) continue;
@@ -112,9 +160,9 @@ function main() {
         const pointCount = Math.floor(pointBytes.length / 16);
         const payload = framePayload(dataRoot, episode, step, i, globalFrameId, time, pointCount);
         payload.frame.task = task;
-        payload.frame.category = meta && meta.category || '';
-        payload.frame.taskDescription = meta && meta.description || '';
-        payload.robot.type = meta && meta.robot || payload.robot.type;
+        payload.frame.category = meta && meta.category || step.category || firstStep.category || '';
+        payload.frame.taskDescription = meta && meta.description || step.description || firstStep.description || '';
+        payload.robot.type = meta && meta.robot || step.robot || step.robotType || payload.robot.type;
 
         timelineAppender.append(
           `${dataset}.${sequence}.timeline`,
@@ -169,6 +217,9 @@ function main() {
       episodeLimitPerTask: episodeLimitPerTask,
       pointStride: pointStride,
       pointFrameStride: pointFrameStride,
+      startFrameId: startFrameId,
+      append: append,
+      nextFrameId: globalFrameId,
       durationMs: Math.round(elapsedMs)
     }, null, 2));
   } finally {

@@ -590,7 +590,20 @@ input[type="range"] {
   }
 
   .motion-card {
-    bottom: 116px;
+    bottom: 112px;
+    padding: 10px;
+  }
+
+  .episode-control {
+    grid-template-columns: 54px minmax(0, 1fr) 54px;
+  }
+
+  .motion-grid div {
+    padding: 7px 8px;
+  }
+
+  #traceMap {
+    display: none;
   }
 
   .sensor-dialog {

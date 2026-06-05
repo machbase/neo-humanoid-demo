@@ -90,6 +90,7 @@ function main() {
   server.static('/vendor', path.join(publicDir, 'vendor'));
   server.static('/assets', path.join(publicDir, 'assets'));
   server.staticFile('/app.js', path.join(publicDir, 'app.js'));
+  server.staticFile('/unitree-g1.js', path.join(publicDir, 'unitree-g1.js'));
   server.staticFile('/styles.css', path.join(publicDir, 'styles.css'));
   server.staticFile('/index.html', indexFile);
 

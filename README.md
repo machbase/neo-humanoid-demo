@@ -391,13 +391,29 @@ DB에는 LOD별 데이터를 따로 저장하지 않고, API가 요청 시 downs
 
 브라우저 데모는 다음을 표시합니다.
 
-- 3D 휴머노이드 skeleton과 시간별 관절 동작
+- Unitree G1 공식 mesh 기반 3D 휴머노이드와 시간별 관절 동작
 - 로봇 주변 공간 포인트와 센서 시야
 - frame, robot type, episode/source step, speed
 - 관절 activity bar, IMU attitude, hand pressure strip
 - RGB/depth/LiDAR media 상태
 - Machbase query latency
 - task/category 선택, episode 선택, 재생/정지와 timeline 이동
+
+## 3D 모델 리소스
+
+브라우저 렌더링에는 Unitree의 공식 G1 29DOF URDF/STL visual asset을 사용합니다.
+
+```text
+source: https://github.com/unitreerobotics/unitree_ros
+files:
+  robots/g1_description/g1_29dof_rev_1_0.urdf
+  robots/g1_description/meshes/*.STL
+local:
+  public/assets/robots/unitree_g1/
+license: BSD 3-Clause
+```
+
+`public/unitree-g1.js`는 브라우저에서 URDF를 파싱하고 STL mesh를 로드한 뒤, Humanoid Everyday의 `leg_state`와 `arm_state` 배열을 G1 joint 이름에 매핑합니다. 모델 로딩에 실패하면 `public/app.js`의 procedural humanoid가 fallback으로 그대로 표시됩니다.
 
 ## 문제 해결
 

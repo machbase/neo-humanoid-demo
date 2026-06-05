@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
+import { createUnitreeG1Model } from './unitree-g1.js';
 
 const canvas = document.getElementById('scene');
 const timeline = document.getElementById('timeline');
@@ -83,6 +84,9 @@ scene.add(side);
 
 const robotRoot = new THREE.Group();
 scene.add(robotRoot);
+const proceduralMeshes = [];
+let unitreeG1Model = null;
+let officialRobotVisualReady = false;
 
 const pointGeometry = new THREE.BufferGeometry();
 let pointPositionAttribute = null;
@@ -129,43 +133,49 @@ function material(color) {
 function sphere(name, radius, mat) {
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 24, 16), mat);
   mesh.name = name;
-  robotRoot.add(mesh);
-  return mesh;
+  return addProceduralMesh(mesh);
 }
 
 function bone(name, radius, mat) {
   const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, 0.72, 8, 18), mat);
   mesh.name = name;
-  robotRoot.add(mesh);
-  return mesh;
+  return addProceduralMesh(mesh);
 }
 
 function capsulePart(name, radius, length, mat) {
   const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 8, 20), mat);
   mesh.name = name;
-  robotRoot.add(mesh);
-  return mesh;
+  return addProceduralMesh(mesh);
 }
 
 function cylinderPart(name, radiusTop, radiusBottom, height, mat) {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 28), mat);
   mesh.name = name;
-  robotRoot.add(mesh);
-  return mesh;
+  return addProceduralMesh(mesh);
 }
 
 function boxPart(name, sx, sy, sz, mat) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
   mesh.name = name;
-  robotRoot.add(mesh);
-  return mesh;
+  return addProceduralMesh(mesh);
 }
 
 function shellPart(name, radius, mat) {
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 18), mat);
   mesh.name = name;
+  return addProceduralMesh(mesh);
+}
+
+function addProceduralMesh(mesh) {
+  proceduralMeshes.push(mesh);
   robotRoot.add(mesh);
   return mesh;
+}
+
+function setProceduralVisible(visible) {
+  for (let i = 0; i < proceduralMeshes.length; i++) {
+    proceduralMeshes[i].visible = !!visible;
+  }
 }
 
 const jointMeshes = {};
@@ -249,6 +259,20 @@ const sensorCone = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ color: 0x22c7a5, transparent: true, opacity: 0.035, depthWrite: false })
 );
 robotRoot.add(sensorCone);
+
+unitreeG1Model = createUnitreeG1Model();
+robotRoot.add(unitreeG1Model.root);
+unitreeG1Model.ready.then(() => {
+  officialRobotVisualReady = true;
+  setProceduralVisible(false);
+  unitreeG1Model.root.visible = true;
+  if (currentPayload) unitreeG1Model.update(currentPayload);
+}).catch((err) => {
+  officialRobotVisualReady = false;
+  setProceduralVisible(true);
+  unitreeG1Model.root.visible = false;
+  console.warn(err && err.message ? err.message : err);
+});
 
 let manifest = null;
 let episodeIndex = [];
@@ -481,6 +505,7 @@ function updateRobot(payload) {
 
   sensorPod.position.copy(p.head).add(vec(0, 0.005, 0.22));
   sensorCone.position.copy(p.chest).add(vec(0, 1.02, -0.04));
+  if (officialRobotVisualReady && unitreeG1Model) unitreeG1Model.update(payload);
 }
 
 function ensurePointCapacity(total) {

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Humanoid Physical AI by Machbase Neo</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="demo-shell">
+    <canvas id="scene"></canvas>
+
+    <header class="hud-top">
+      <div>
+        <h1>Humanoid Physical AI</h1>
+        <p id="datasetLabel">Loading Machbase timeline</p>
+      </div>
+      <div class="live-pill" id="sourceLabel">initializing</div>
+    </header>
+
+    <section class="motion-card">
+      <div class="card-label">Motion</div>
+      <div class="episode-control">
+        <button id="prevEpisodeButton" aria-label="Previous episode" title="Previous episode">Prev</button>
+        <select id="taskSelect" aria-label="Task"></select>
+        <button id="nextEpisodeButton" aria-label="Next episode" title="Next episode">Next</button>
+      </div>
+      <select id="episodeSelect" class="episode-select" aria-label="Episode"></select>
+      <div class="motion-grid">
+        <div><span>Frame</span><strong id="frameId">0</strong></div>
+        <div><span>Robot</span><strong id="robotType">--</strong></div>
+        <div><span>Episode</span><strong id="episodeLabel">--</strong></div>
+        <div><span>Speed</span><strong id="speedLabel">0.00 m/s</strong></div>
+      </div>
+      <canvas id="traceMap" width="260" height="132" aria-label="Trajectory"></canvas>
+    </section>
+
+    <section class="sensor-card">
+      <div class="card-label">Physical AI Sensors</div>
+      <button class="sensor-panel" type="button" data-sensor="joints" aria-label="Open joint activity chart">
+        <div class="sensor-row">
+          <span>Joint Activity</span>
+          <strong id="jointSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="jointStatus"></i><span>standby</span></div>
+        <div class="bars" id="jointBars" aria-label="Joint activity bars"></div>
+      </button>
+
+      <button class="sensor-panel" type="button" data-sensor="imu" aria-label="Open IMU chart">
+        <div class="sensor-row">
+          <span>IMU Attitude</span>
+          <strong id="imuSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="imuStatus"></i><span>standby</span></div>
+        <canvas id="imuCanvas" width="260" height="92" aria-label="IMU attitude"></canvas>
+      </button>
+
+      <button class="sensor-panel" type="button" data-sensor="pressure" aria-label="Open hand pressure chart">
+        <div class="sensor-row">
+          <span>Hand Pressure</span>
+          <strong id="pressureSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="pressureStatus"></i><span>standby</span></div>
+        <div class="pressure-strip" id="pressureStrip" aria-label="Hand pressure strip"></div>
+      </button>
+
+      <button class="sensor-panel sensor-compact" type="button" data-sensor="odometry" aria-label="Open odometry chart">
+        <div class="sensor-row">
+          <span>Odometry</span>
+          <strong id="odometrySummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="odometryStatus"></i><span>standby</span></div>
+      </button>
+
+      <button class="sensor-panel sensor-compact" type="button" data-sensor="rgb" aria-label="Open RGB chart">
+        <div class="sensor-row">
+          <span>RGB Camera</span>
+          <strong id="rgbSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="rgbStatus"></i><span>standby</span></div>
+      </button>
+
+      <button class="sensor-panel sensor-compact" type="button" data-sensor="depth" aria-label="Open depth chart">
+        <div class="sensor-row">
+          <span>Depth Camera</span>
+          <strong id="depthSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="depthStatus"></i><span>standby</span></div>
+      </button>
+
+      <button class="sensor-panel sensor-compact" type="button" data-sensor="lidar" aria-label="Open LiDAR chart">
+        <div class="sensor-row">
+          <span>LiDAR</span>
+          <strong id="lidarSummary">--</strong>
+        </div>
+        <div class="sensor-state"><i id="lidarStatus"></i><span>standby</span></div>
+      </button>
+    </section>
+
+    <footer class="transport">
+      <button id="playButton" aria-label="Play or pause" title="Play or pause">Play</button>
+      <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Timeline">
+      <div class="transport-readout">
+        <strong id="timeLabel">--</strong>
+        <span id="queryLabel">--</span>
+      </div>
+    </footer>
+
+    <div class="sensor-modal" id="sensorModal" aria-hidden="true">
+      <div class="sensor-modal-backdrop" id="sensorModalBackdrop"></div>
+      <section class="sensor-dialog" role="dialog" aria-modal="true" aria-labelledby="sensorModalTitle">
+        <header class="sensor-dialog-head">
+          <div>
+            <span>Realtime Sensor Stream</span>
+            <h2 id="sensorModalTitle">Sensor</h2>
+            <p id="sensorModalSubtitle">Waiting for frames</p>
+          </div>
+          <div class="sensor-dialog-actions">
+            <button id="sensorModalPlay" type="button" aria-label="Play or pause from sensor chart" title="Play or pause">Play</button>
+            <button id="sensorModalClose" type="button" aria-label="Close sensor chart" title="Close">Close</button>
+          </div>
+        </header>
+        <canvas id="sensorChartCanvas" width="760" height="330" aria-label="Realtime sensor chart"></canvas>
+        <div class="sensor-chart-legend" id="sensorChartLegend"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

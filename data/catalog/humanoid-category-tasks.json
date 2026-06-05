@@ -1,0 +1,51 @@
+[
+  {
+    "category": "articulate_object",
+    "task": "press_the_stapler_g1",
+    "robot": "g1",
+    "description": "the robot uses its right hand to press on the stapler that is in the middle of the desk",
+    "url": "https://www.dropbox.com/scl/fi/nou16s8hvcvdc95faz1rm/press_the_stapler_g1.zip?rlkey=ze19v23ah5pidev8mim8hxurr&st=c9fiofap&dl=1"
+  },
+  {
+    "category": "basic_manipulation",
+    "task": "pull_a_chair_away_from_table_g1",
+    "robot": "g1",
+    "description": "The robot uses its both hands to grab the back of the black chair and pull it away from the white table",
+    "url": "https://www.dropbox.com/scl/fi/8blym019aszo41k5or52v/pull_a_chair_away_from_table_g1.zip?rlkey=vf0wwqogp5mt387rvqz8p80zp&st=g6h6glba&dl=1"
+  },
+  {
+    "category": "deformable_object",
+    "task": "unfold_a_tablet_cover_h1",
+    "robot": "h1",
+    "description": "The robot uses its right hand to pull the cover of a folded tablet cover kept in the middle of the desk",
+    "url": "https://www.dropbox.com/scl/fi/abx8ib3qaw3aef53p2s3s/unfold_a_tablet_cover_h1.zip?rlkey=du0vbdhquqcsyaq94jcpvk0pn&st=vlg8vrll&dl=1"
+  },
+  {
+    "category": "high_precision",
+    "task": "press_start_boiling_button",
+    "robot": "h1",
+    "description": "A kettle is kept at the center of the table close to the robot and the robot uses its right index finger to press downwards on the transparent start boiling button",
+    "url": "https://www.dropbox.com/scl/fi/t4rfu7t221ct1gqutdoyd/press_start_boiling_button.zip?rlkey=cf1pp6gvq38qphfqgt77qnj9v&st=07dy25tp&dl=1"
+  },
+  {
+    "category": "human_robot_interaction",
+    "task": "pass_plates",
+    "robot": "g1",
+    "description": "A person passes a plate to the robot and the robot grabs it with its left hand and places it at the centre of the table infront of it",
+    "url": "https://www.dropbox.com/scl/fi/ps1eqlhl01egot2bufm7p/pass_plates.zip?rlkey=iu55k0cnlve46sc81t0nyuoyw&st=bm4m5ahz&dl=1"
+  },
+  {
+    "category": "loco_manipulation",
+    "task": "walk_towards_the_cabinet_and_close_the_cabinet_door",
+    "robot": "g1",
+    "description": "The robot walks towards an open cabinet and lifts its left hand to push the door towards the right to close it.",
+    "url": "https://www.dropbox.com/scl/fi/buqy2rrnodgpvztz0t0gu/walk_towards_the_cabinet_and_close_the_cabinet_door.zip?rlkey=k5x8pj05puoss1lh75kqvg49v&st=uo4r9tog&dl=1"
+  },
+  {
+    "category": "tool_use",
+    "task": "remove_a_soldering_gun_from_its_base_h1",
+    "robot": "h1",
+    "description": "the robot uses its right hand to grab the soldering gun kept on the middle of the table and pulls it out of its base and keep it on the right side of the base",
+    "url": "https://www.dropbox.com/scl/fi/zew4eclzsj2qvzlbwssfa/remove_a_soldering_gun_from_its_base.zip?rlkey=g095vgd8yc2hwkq1pmxmi45gy&st=q17wxn9q&dl=1"
+  }
+]

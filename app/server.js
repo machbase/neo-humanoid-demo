@@ -5,7 +5,7 @@ const http = require('http');
 const path = require('path');
 const process = require('process');
 const ROOT = path.dirname(path.dirname(path.resolve(process.argv[1])));
-const { episodes, episodeExportZip, frame, manifest, points, pointsBinary, poses, timelineQueryLink } = require(path.join(ROOT, 'lib', 'api.js'));
+const { episodes, episodeExportZip, frame, frames, manifest, points, pointsBinary, poses, timelineQueryLink } = require(path.join(ROOT, 'lib', 'api.js'));
 const { intArg, parseArgs } = require(path.join(ROOT, 'lib', 'env.js'));
 
 function println() {
@@ -120,6 +120,7 @@ function main() {
   server.get('/api/episodes', (ctx) => json(ctx, episodes(args, queryFromCtx(ctx, ['dataset', 'sequence', 'limit']))));
   server.get('/api/poses', (ctx) => json(ctx, poses(args, queryFromCtx(ctx, ['dataset', 'sequence', 'limit']))));
   server.get('/api/frame', (ctx) => json(ctx, frame(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'dataset', 'sequence']))));
+  server.get('/api/frames', (ctx) => json(ctx, frames(args, queryFromCtx(ctx, ['startFrameId', 'endFrameId', 'frameId', 'frameid', 'frameIds', 'frameids', 'count', 'limit', 'dataset', 'sequence']))));
   server.get('/api/points', (ctx) => json(ctx, points(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'lod', 'dataset', 'sequence']))));
   server.get('/api/points.bin', (ctx) => binary(ctx, pointsBinary(args, queryFromCtx(ctx, ['time', 'frameId', 'frameid', 'lod', 'dataset', 'sequence']))));
   server.get('/api/export/timeline-query', (ctx) => json(ctx, timelineQueryLink(args, queryFromCtx(ctx, ['episode', 'dataset', 'sequence', 'machbaseBase', 'machbaseHttpBase', 'machbase-base', 'machbase-http-base']))));

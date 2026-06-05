@@ -124,6 +124,36 @@ p {
   text-transform: uppercase;
 }
 
+.sensor-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sensor-card-head .card-label {
+  margin-bottom: 0;
+}
+
+#viewAllSensorsButton {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#viewAllSensorsButton:hover,
+#viewAllSensorsButton:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
 .episode-control {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) 54px;
@@ -407,11 +437,22 @@ p {
   display: flex;
 }
 
+.sensor-modal.all-view {
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 78px 16px 102px;
+  pointer-events: none;
+}
+
 .sensor-modal-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(218, 226, 224, 0.58);
   backdrop-filter: blur(5px);
+}
+
+.sensor-modal.all-view .sensor-modal-backdrop {
+  display: none;
 }
 
 .sensor-dialog {
@@ -423,6 +464,40 @@ p {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 28px 90px rgba(72, 91, 96, 0.24);
+}
+
+.sensor-dialog.all {
+  width: min(1120px, calc(100vw - 36px));
+  overflow: auto;
+}
+
+.sensor-modal.all-view .sensor-dialog.all {
+  width: min(430px, calc(100vw - 32px));
+  max-height: none;
+  padding: 12px;
+  overflow: auto;
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.91);
+  box-shadow: 0 18px 56px rgba(72, 91, 96, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.sensor-modal.all-view .sensor-dialog-head {
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  margin: -12px -12px 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.sensor-modal.all-view .sensor-dialog h2 {
+  font-size: 18px;
+}
+
+.sensor-modal.all-view .sensor-dialog p {
+  display: none;
 }
 
 .sensor-dialog-head {
@@ -488,6 +563,75 @@ p {
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.84);
+}
+
+.sensor-dialog.all #sensorChartCanvas,
+.sensor-dialog.all > .sensor-chart-legend {
+  display: none;
+}
+
+.sensor-all-charts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sensor-modal.all-view .sensor-all-charts {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.sensor-all-chart {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.sensor-modal.all-view .sensor-all-chart {
+  padding: 8px;
+}
+
+.sensor-all-chart h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.sensor-all-chart p {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sensor-all-chart canvas {
+  display: block;
+  width: 100%;
+  height: 112px;
+  margin-top: 8px;
+  border: 1px solid rgba(37, 61, 66, 0.08);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.sensor-modal.all-view .sensor-all-chart canvas {
+  height: 74px;
+  margin-top: 6px;
+}
+
+.sensor-all-chart .sensor-chart-legend {
+  margin-top: 7px;
+}
+
+.sensor-modal.all-view .sensor-all-chart .sensor-chart-legend {
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 10px;
 }
 
 .sensor-chart-legend {
@@ -645,11 +789,32 @@ input[type="range"] {
     padding: 13px;
   }
 
+  .sensor-modal.all-view {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .sensor-modal.all-view .sensor-dialog.all {
+    width: min(460px, calc(100vw - 20px));
+    max-height: 48vh;
+  }
+
   .sensor-dialog h2 {
     font-size: 20px;
   }
 
   .sensor-dialog-head {
     gap: 10px;
+  }
+
+  .sensor-all-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .sensor-all-charts {
+    grid-template-columns: 1fr;
   }
 }

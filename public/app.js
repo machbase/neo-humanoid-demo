@@ -34,6 +34,7 @@ const depthSummary = document.getElementById('depthSummary');
 const depthStatus = document.getElementById('depthStatus');
 const lidarSummary = document.getElementById('lidarSummary');
 const lidarStatus = document.getElementById('lidarStatus');
+const viewAllSensorsButton = document.getElementById('viewAllSensorsButton');
 const traceMap = document.getElementById('traceMap');
 const timeLabel = document.getElementById('timeLabel');
 const queryLabel = document.getElementById('queryLabel');
@@ -44,6 +45,7 @@ const sensorModalPlay = document.getElementById('sensorModalPlay');
 const sensorModalTitle = document.getElementById('sensorModalTitle');
 const sensorModalSubtitle = document.getElementById('sensorModalSubtitle');
 const sensorChartCanvas = document.getElementById('sensorChartCanvas');
+const sensorAllCharts = document.getElementById('sensorAllCharts');
 const sensorChartLegend = document.getElementById('sensorChartLegend');
 const sensorButtons = Array.from(document.querySelectorAll('[data-sensor]'));
 
@@ -374,9 +376,12 @@ let maxMs = 0;
 let lastTick = performance.now();
 let currentPayload = null;
 let loadingFrame = false;
+let loadingFrameBatch = false;
 let pendingFrameId = -1;
+let pendingBatchStartFrameId = -1;
 let lastFetchedFrameId = -1;
 let lastFrameRequestAt = 0;
+let lastFrameBatchRequestAt = 0;
 let lastFrameAppliedAt = 0;
 let lastTraceDrawAt = 0;
 let lastPointRequestAt = 0;
@@ -386,16 +391,24 @@ let lastQueryMs = 0;
 let viewGeneration = 0;
 let pendingCameraReset = false;
 const PLAYBACK_FETCH_INTERVAL_MS = 66;
+const FRAME_PREFETCH_INTERVAL_MS = 220;
+const FRAME_PREFETCH_COUNT = 120;
+const FRAME_PREFETCH_LOW_WATER = 60;
 const POINT_FETCH_INTERVAL_MS = 600;
-const FRAME_CACHE_LIMIT = 180;
+const FRAME_CACHE_LIMIT = 360;
 const SENSOR_HISTORY_LIMIT = 180;
+const PLAY_TOGGLE_MAX_MOVE_PX = 8;
+const PLAY_TOGGLE_MAX_HOLD_MS = 700;
 const FLOOR_Z = 0;
 const frameCache = new Map();
 const pointCache = new Map();
 const sensorHistory = [];
+const allSensorChartCanvases = {};
 let activeSensorChart = '';
 let lastChartDrawAt = 0;
+let sceneClickStart = null;
 const VISUAL_HEADING_MIN_DISTANCE_M = 0.12;
+const ALL_SENSOR_CHART_TYPES = ['joints', 'imu', 'pressure', 'odometry', 'rgb', 'depth', 'lidar'];
 const episodeVisualTransform = {
   originX: 0,
   originY: 0,
@@ -1165,15 +1178,71 @@ function drawLineChart(ctx, width, height, spec, samples) {
   ctx.fillText(right, width - padRight - ctx.measureText(right).width, height - 10);
 }
 
-function renderChartLegend(spec) {
-  sensorChartLegend.innerHTML = '';
+function renderChartLegend(spec, target) {
+  const legend = target || sensorChartLegend;
+  legend.innerHTML = '';
   for (let i = 0; i < spec.series.length; i++) {
     const item = document.createElement('span');
     const swatch = document.createElement('i');
     swatch.style.background = spec.series[i].color;
     item.appendChild(swatch);
     item.appendChild(document.createTextNode(spec.series[i].label));
-    sensorChartLegend.appendChild(item);
+    legend.appendChild(item);
+  }
+}
+
+function chartCanvasSize(canvasEl) {
+  const rect = canvasEl.getBoundingClientRect();
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.max(1, Math.floor(rect.width * ratio));
+  const height = Math.max(1, Math.floor(rect.height * ratio));
+  if (canvasEl.width !== width || canvasEl.height !== height) {
+    canvasEl.width = width;
+    canvasEl.height = height;
+  }
+  return { width: width, height: height };
+}
+
+function ensureAllSensorCharts() {
+  if (!sensorAllCharts || Object.keys(allSensorChartCanvases).length === ALL_SENSOR_CHART_TYPES.length) return;
+  sensorAllCharts.innerHTML = '';
+  for (let i = 0; i < ALL_SENSOR_CHART_TYPES.length; i++) {
+    const type = ALL_SENSOR_CHART_TYPES[i];
+    const spec = chartSpec(type);
+    const card = document.createElement('section');
+    card.className = 'sensor-all-chart';
+
+    const title = document.createElement('h3');
+    title.textContent = spec.title;
+    const subtitle = document.createElement('p');
+    subtitle.textContent = spec.subtitle;
+    const canvasEl = document.createElement('canvas');
+    canvasEl.setAttribute('aria-label', `${spec.title} realtime chart`);
+    const legend = document.createElement('div');
+    legend.className = 'sensor-chart-legend';
+
+    card.appendChild(title);
+    card.appendChild(subtitle);
+    card.appendChild(canvasEl);
+    card.appendChild(legend);
+    sensorAllCharts.appendChild(card);
+    allSensorChartCanvases[type] = { canvas: canvasEl, legend: legend };
+    renderChartLegend(spec, legend);
+  }
+}
+
+function drawChartCanvas(canvasEl, spec) {
+  const size = chartCanvasSize(canvasEl);
+  drawLineChart(canvasEl.getContext('2d'), size.width, size.height, spec, sensorHistory);
+}
+
+function drawAllSensorCharts() {
+  ensureAllSensorCharts();
+  for (let i = 0; i < ALL_SENSOR_CHART_TYPES.length; i++) {
+    const type = ALL_SENSOR_CHART_TYPES[i];
+    const entry = allSensorChartCanvases[type];
+    if (!entry) continue;
+    drawChartCanvas(entry.canvas, chartSpec(type));
   }
 }
 
@@ -1182,24 +1251,29 @@ function drawSensorChart(force) {
   const now = performance.now();
   if (!force && now - lastChartDrawAt < 120) return;
   lastChartDrawAt = now;
-  const rect = sensorChartCanvas.getBoundingClientRect();
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  const width = Math.max(1, Math.floor(rect.width * ratio));
-  const height = Math.max(1, Math.floor(rect.height * ratio));
-  if (sensorChartCanvas.width !== width || sensorChartCanvas.height !== height) {
-    sensorChartCanvas.width = width;
-    sensorChartCanvas.height = height;
+  if (activeSensorChart === 'all') {
+    drawAllSensorCharts();
+    return;
   }
   const spec = chartSpec(activeSensorChart);
-  drawLineChart(sensorChartCtx, width, height, spec, sensorHistory);
+  const size = chartCanvasSize(sensorChartCanvas);
+  drawLineChart(sensorChartCtx, size.width, size.height, spec, sensorHistory);
   renderChartLegend(spec);
 }
 
 function openSensorModal(type) {
   activeSensorChart = type || 'joints';
-  const spec = chartSpec(activeSensorChart);
-  sensorModalTitle.textContent = spec.title;
-  sensorModalSubtitle.textContent = spec.subtitle;
+  const allMode = activeSensorChart === 'all';
+  const spec = allMode ? null : chartSpec(activeSensorChart);
+  const dialog = sensorModal.querySelector('.sensor-dialog');
+  sensorModalTitle.textContent = allMode ? 'All Sensor Streams' : spec.title;
+  sensorModalSubtitle.textContent = allMode ? 'Realtime charts for joints, IMU, pressure, odometry, RGB, depth, and LiDAR' : spec.subtitle;
+  sensorModal.classList.toggle('all-view', allMode);
+  dialog.classList.toggle('all', allMode);
+  dialog.setAttribute('aria-modal', allMode ? 'false' : 'true');
+  if (sensorAllCharts) sensorAllCharts.hidden = !allMode;
+  sensorChartCanvas.hidden = allMode;
+  sensorChartLegend.hidden = allMode;
   sensorModal.classList.add('open');
   sensorModal.setAttribute('aria-hidden', 'false');
   drawSensorChart(true);
@@ -1207,7 +1281,11 @@ function openSensorModal(type) {
 
 function closeSensorModal() {
   sensorModal.classList.remove('open');
+  sensorModal.classList.remove('all-view');
   sensorModal.setAttribute('aria-hidden', 'true');
+  const dialog = sensorModal.querySelector('.sensor-dialog');
+  dialog.classList.remove('all');
+  dialog.setAttribute('aria-modal', 'true');
   activeSensorChart = '';
 }
 
@@ -1261,6 +1339,18 @@ async function requestPoints(frameId) {
   };
 }
 
+function cacheFramePayload(payload, queryMs) {
+  const resolvedFrameId = payload && payload.frame && payload.frame.frameId != null ? payload.frame.frameId : -1;
+  if (resolvedFrameId < 0) return null;
+  const entry = {
+    frameId: resolvedFrameId,
+    payload: payload,
+    queryMs: queryMs
+  };
+  rememberFrame(resolvedFrameId, entry);
+  return entry;
+}
+
 function rememberFrame(frameId, entry) {
   frameCache.set(frameId, entry);
   if (frameCache.size <= FRAME_CACHE_LIMIT) return;
@@ -1275,6 +1365,46 @@ function rememberPoints(frameId, buffer) {
   pointCache.delete(first);
 }
 
+function uniqueFrameIds(ids) {
+  const out = [];
+  const seen = {};
+  for (let i = 0; i < ids.length; i++) {
+    const id = Math.round(Number(ids[i]));
+    if (!Number.isFinite(id) || id < 0 || seen[id]) continue;
+    seen[id] = true;
+    out.push(id);
+  }
+  return out;
+}
+
+function framePayloadById(frames, frameId) {
+  for (let i = 0; i < frames.length; i++) {
+    const payload = frames[i];
+    if (payload && payload.frame && payload.frame.frameId === frameId) return payload;
+  }
+  return null;
+}
+
+function cachedFrameAheadCount(frameId) {
+  const ep = activeEpisode();
+  let count = 0;
+  const start = clamp(Math.round(Number(frameId || 0)), ep.frameStart, ep.frameEnd);
+  for (let id = start; id <= ep.frameEnd && count < FRAME_PREFETCH_COUNT; id++) {
+    if (!frameCache.has(id)) break;
+    count++;
+  }
+  return count;
+}
+
+function frameBatchPath(params) {
+  const search = new URLSearchParams();
+  const keys = Object.keys(params || {});
+  for (let i = 0; i < keys.length; i++) search.set(keys[i], String(params[keys[i]]));
+  if (manifest && manifest.dataset) search.set('dataset', manifest.dataset);
+  if (manifest && manifest.sequence) search.set('sequence', manifest.sequence);
+  return `/api/frames?${search.toString()}`;
+}
+
 async function prepareEpisodeVisualTransform(ep, generation) {
   if (!ep) return;
   try {
@@ -1283,13 +1413,16 @@ async function prepareEpisodeVisualTransform(ep, generation) {
     const headingFrameId = ep.category === 'openhe_motion'
       ? Math.min(endFrameId, startFrameId + Math.min(240, Math.max(1, Math.round(ep.frameCount * 0.08))))
       : endFrameId;
-    const requests = [json(`/api/frame?frameId=${startFrameId}`)];
-    if (headingFrameId !== startFrameId) requests.push(json(`/api/frame?frameId=${headingFrameId}`));
-    if (endFrameId !== startFrameId && endFrameId !== headingFrameId) requests.push(json(`/api/frame?frameId=${endFrameId}`));
-    const results = await Promise.all(requests);
-    const startPayload = results[0];
-    const headingPayload = results[1] || startPayload;
-    const endPayload = results[results.length - 1] || headingPayload;
+    const frameIds = uniqueFrameIds([startFrameId, headingFrameId, endFrameId]);
+    const started = performance.now();
+    const payload = await json(frameBatchPath({ frameIds: frameIds.join(','), limit: frameIds.length }));
+    const results = array(payload.frames);
+    const perFrameMs = (performance.now() - started) / Math.max(1, results.length);
+    for (let i = 0; i < results.length; i++) cacheFramePayload(results[i], perFrameMs);
+    const startPayload = framePayloadById(results, startFrameId) || results[0];
+    const headingPayload = framePayloadById(results, headingFrameId) || startPayload;
+    const endPayload = framePayloadById(results, endFrameId) || results[results.length - 1] || headingPayload;
+    if (!startPayload) return;
     if (generation !== viewGeneration || selectedEpisode !== ep) return;
     configureVisualTransform(startPayload.frame || {}, headingPayload.frame || startPayload.frame || {}, endPayload.frame || headingPayload.frame || startPayload.frame || {});
     if (currentPayload) {
@@ -1321,6 +1454,14 @@ function applyFrameEntry(entry) {
 
 async function maybeLoadPoints(frameId, force) {
   const generation = viewGeneration;
+  if (selectedEpisode && selectedEpisode.pointFrames <= 0) {
+    if (force) {
+      clearPointCloud();
+      currentShownPoints = 0;
+      if (currentPayload) updateHud(currentPayload, currentShownPoints, lastQueryMs);
+    }
+    return;
+  }
   const cached = pointCache.get(frameId);
   if (cached) {
     if (generation !== viewGeneration) return;
@@ -1352,6 +1493,58 @@ async function maybeLoadPoints(frameId, force) {
   }
 }
 
+async function prefetchFrameWindow(frameId, force) {
+  if (!manifest || !selectedEpisode) return;
+  const generation = viewGeneration;
+  const ep = activeEpisode();
+  const startFrameId = clamp(Math.round(Number(frameId || ep.frameStart)), ep.frameStart, ep.frameEnd);
+  const cachedAhead = cachedFrameAheadCount(startFrameId);
+  const cachedEntry = frameCache.get(startFrameId);
+  if (force && cachedEntry && cachedEntry.frameId !== lastFetchedFrameId) {
+    applyFrameEntry(cachedEntry);
+    maybeLoadPoints(cachedEntry.frameId, false);
+  }
+  if (!force && cachedAhead >= FRAME_PREFETCH_LOW_WATER) return;
+  const requestStartFrameId = cachedAhead > 0 ? startFrameId + cachedAhead : startFrameId;
+  if (requestStartFrameId > ep.frameEnd) return;
+  const now = performance.now();
+  if (loadingFrameBatch) {
+    pendingBatchStartFrameId = requestStartFrameId;
+    return;
+  }
+  if (!force && now - lastFrameBatchRequestAt < FRAME_PREFETCH_INTERVAL_MS) {
+    pendingBatchStartFrameId = requestStartFrameId;
+    return;
+  }
+
+  loadingFrameBatch = true;
+  lastFrameBatchRequestAt = now;
+  try {
+    const count = Math.min(FRAME_PREFETCH_COUNT, ep.frameEnd - requestStartFrameId + 1);
+    const started = performance.now();
+    const payload = await json(frameBatchPath({ startFrameId: requestStartFrameId, count: count }));
+    if (generation !== viewGeneration || selectedEpisode !== ep) return;
+    const frames = array(payload.frames);
+    const perFrameMs = (performance.now() - started) / Math.max(1, frames.length);
+    for (let i = 0; i < frames.length; i++) cacheFramePayload(frames[i], perFrameMs);
+    const targetFrameId = pendingFrameId >= 0 ? pendingFrameId : startFrameId;
+    const entry = frameCache.get(targetFrameId) || frameCache.get(startFrameId) || frameCache.get(requestStartFrameId);
+    if (entry && entry.frameId !== lastFetchedFrameId) {
+      applyFrameEntry(entry);
+      maybeLoadPoints(entry.frameId, false);
+    }
+  } catch (err) {
+    if (force) sourceLabel.textContent = err.message || String(err);
+  } finally {
+    loadingFrameBatch = false;
+    if (pendingBatchStartFrameId >= 0) {
+      const next = pendingBatchStartFrameId;
+      pendingBatchStartFrameId = -1;
+      prefetchFrameWindow(next, false);
+    }
+  }
+}
+
 async function loadFrame(frameId) {
   const generation = viewGeneration;
   const cached = frameCache.get(frameId);
@@ -1371,15 +1564,11 @@ async function loadFrame(frameId) {
     const started = performance.now();
     const payload = await json(`/api/frame?frameId=${frameId}`);
     if (generation !== viewGeneration) return;
-    const resolvedFrameId = payload.frame && payload.frame.frameId != null ? payload.frame.frameId : frameId;
-    const entry = {
-      frameId: resolvedFrameId,
-      payload,
-      queryMs: performance.now() - started
-    };
-    rememberFrame(resolvedFrameId, entry);
+    const entry = cacheFramePayload(payload, performance.now() - started);
+    if (!entry) return;
     applyFrameEntry(entry);
-    maybeLoadPoints(resolvedFrameId, !playing);
+    maybeLoadPoints(entry.frameId, !playing);
+    if (playing) prefetchFrameWindow(entry.frameId, false);
   } catch (err) {
     sourceLabel.textContent = err.message || String(err);
   } finally {
@@ -1398,6 +1587,12 @@ function maybeLoadFrame(frameId, force) {
   if (frameId === lastFetchedFrameId) return;
   if (frameCache.has(frameId)) {
     loadFrame(frameId);
+    if (playing) prefetchFrameWindow(frameId, false);
+    return;
+  }
+  if (playing && !force) {
+    pendingFrameId = frameId;
+    prefetchFrameWindow(frameId, false);
     return;
   }
   const now = performance.now();
@@ -1497,9 +1692,12 @@ function resetEpisodeView() {
   currentShownPoints = 0;
   pendingCameraReset = true;
   pendingFrameId = -1;
+  pendingBatchStartFrameId = -1;
   lastFetchedFrameId = -1;
   loadingFrame = false;
+  loadingFrameBatch = false;
   loadingPoints = false;
+  lastFrameBatchRequestAt = 0;
 }
 
 function episodeOptionLabel(ep, orderIndex) {
@@ -1605,7 +1803,7 @@ function selectEpisode(index, keepPlaying) {
   prepareEpisodeVisualTransform(selectedEpisode, viewGeneration);
   datasetLabel.textContent = `${manifest.dataset || 'humanoid-everyday'} / ${fmtCount(taskIndex.length || 1)} tasks / ${fmtCount(manifest.frameCount || 0)} frames`;
   updateExportControls();
-  maybeLoadFrame(selectedEpisode.frameStart, true);
+  prefetchFrameWindow(selectedEpisode.frameStart, true);
 }
 
 function selectedEpisodeIndex() {
@@ -1686,6 +1884,33 @@ function setPlaying(next) {
   lastTick = performance.now();
 }
 
+function rememberSceneClickStart(event) {
+  if (event.button != null && event.button !== 0) return;
+  if (event.isPrimary === false) return;
+  sceneClickStart = {
+    x: event.clientX,
+    y: event.clientY,
+    at: performance.now(),
+    pointerId: event.pointerId
+  };
+}
+
+function togglePlayFromSceneClick(event) {
+  if (!sceneClickStart) return;
+  if (event.pointerId != null && sceneClickStart.pointerId != null && event.pointerId !== sceneClickStart.pointerId) return;
+  const dx = event.clientX - sceneClickStart.x;
+  const dy = event.clientY - sceneClickStart.y;
+  const moved = Math.sqrt(dx * dx + dy * dy);
+  const heldMs = performance.now() - sceneClickStart.at;
+  sceneClickStart = null;
+  if (moved > PLAY_TOGGLE_MAX_MOVE_PX || heldMs > PLAY_TOGGLE_MAX_HOLD_MS) return;
+  setPlaying(!playing);
+}
+
+function clearSceneClickStart() {
+  sceneClickStart = null;
+}
+
 async function init() {
   manifest = await json('/api/manifest');
   const episodePayload = await json(`/api/episodes?dataset=${encodeURIComponent(manifest.dataset || '')}&sequence=${encodeURIComponent(manifest.sequence || '')}`);
@@ -1701,6 +1926,11 @@ async function init() {
 playButton.addEventListener('click', () => {
   setPlaying(!playing);
 });
+
+canvas.addEventListener('pointerdown', rememberSceneClickStart);
+canvas.addEventListener('pointerup', togglePlayFromSceneClick);
+canvas.addEventListener('pointercancel', clearSceneClickStart);
+canvas.addEventListener('pointerleave', clearSceneClickStart);
 
 timeline.addEventListener('input', () => {
   setPlaying(false);
@@ -1729,6 +1959,12 @@ taskSelect.addEventListener('change', () => {
 for (let i = 0; i < sensorButtons.length; i++) {
   sensorButtons[i].addEventListener('click', () => {
     openSensorModal(sensorButtons[i].getAttribute('data-sensor'));
+  });
+}
+
+if (viewAllSensorsButton) {
+  viewAllSensorsButton.addEventListener('click', () => {
+    openSensorModal('all');
   });
 }
 

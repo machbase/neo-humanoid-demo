@@ -40,7 +40,10 @@
     </section>
 
     <section class="sensor-card">
-      <div class="card-label">Physical AI Sensors</div>
+      <div class="sensor-card-head">
+        <div class="card-label">Physical AI Sensors</div>
+        <button id="viewAllSensorsButton" type="button" aria-label="View all sensor charts" title="View all sensor charts">View All</button>
+      </div>
       <button class="sensor-panel" type="button" data-sensor="joints" aria-label="Open joint activity chart">
         <div class="sensor-row">
           <span>Joint Activity</span>
@@ -125,6 +128,7 @@
           </div>
         </header>
         <canvas id="sensorChartCanvas" width="760" height="330" aria-label="Realtime sensor chart"></canvas>
+        <div class="sensor-all-charts" id="sensorAllCharts" hidden></div>
         <div class="sensor-chart-legend" id="sensorChartLegend"></div>
       </section>
     </div>

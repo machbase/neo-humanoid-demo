@@ -252,13 +252,13 @@ const rightFingers = createFingers('right', 1);
 
 const sensorPod = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.105, 0.08, 32), matSensor);
 sensorPod.rotation.x = Math.PI / 2;
-robotRoot.add(sensorPod);
+addProceduralMesh(sensorPod);
 
 const sensorCone = new THREE.Mesh(
   new THREE.ConeGeometry(1.25, 2.05, 42, 1, true),
   new THREE.MeshBasicMaterial({ color: 0x22c7a5, transparent: true, opacity: 0.035, depthWrite: false })
 );
-robotRoot.add(sensorCone);
+addProceduralMesh(sensorCone);
 
 unitreeG1Model = createUnitreeG1Model();
 robotRoot.add(unitreeG1Model.root);

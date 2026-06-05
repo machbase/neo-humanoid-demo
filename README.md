@@ -181,7 +181,7 @@ episodeCount: 36
 frame range: 15805..23644
 ```
 
-OpenHE motion은 UI의 `Motion` select에 `openhe_motion / openhe_walk1_subject1`로 표시됩니다. LiDAR point는 원본에 없으므로 센서 패널에서 `0 points`로 표시되는 것이 정상입니다.
+OpenHE motion은 UI의 `Motion` select 첫 번째 항목에 `openhe_motion / openhe_walk1_subject1`로 표시됩니다. OpenHE `walk1`은 직선 보행이 아니라 루프/곡선 보행에 가까우므로, 브라우저 시각화는 episode 시작점에서 전체 끝점까지의 벡터가 아니라 시작 후 약 240 frame 지점까지의 초반 이동 벡터를 전진축으로 사용합니다. LiDAR point는 원본에 없으므로 센서 패널에서 `0 points`로 표시되는 것이 정상입니다.
 
 ## 4. 압축 해제 결과
 
@@ -246,6 +246,7 @@ JSH shell:
 ```text
 PHY_TIMELINE
 PHY_POINT_FRAME
+PHY_EPISODE_INDEX
 ```
 
 주요 저장 관계:
@@ -256,6 +257,7 @@ PHY_POINT_FRAME
 | step time 또는 30Hz frame time | `PHY_TIMELINE.time`, `PHY_POINT_FRAME.time` |
 | `lidar/*.pcd` | `PHY_POINT_FRAME.value` binary |
 | RGB/depth 파일 | `PHY_TIMELINE.value.media` 상대 경로 |
+| episode 요약 | `PHY_EPISODE_INDEX` |
 
 스키마만 출력:
 
@@ -315,6 +317,16 @@ PHY_POINT_FRAME
 ```
 
 `sourceEpisodes`는 raw 디렉토리에서 발견한 전체 episode 수입니다. 현재 로컬 raw에는 기존 샘플까지 남아 있어 37이고, 기본 Humanoid Everyday ingest 직후 API와 UI에는 `--catalog-only`로 적재된 35개 episode가 표시됩니다. OpenHE append까지 실행하면 API와 UI에는 36개 episode가 표시됩니다.
+
+기존 timeline을 유지한 채 episode index만 다시 만들 때:
+
+```text
+/work > ./scripts/rebuild-episode-index.js \
+  --dataset humanoid-everyday \
+  --sequence humanoid-everyday-10m
+```
+
+`/api/episodes`는 초기 화면에서 이 index table을 우선 사용합니다. index가 없으면 기존처럼 `PHY_TIMELINE.value` 전체 JSON을 scan해서 episode 목록을 만들기 때문에 초기 `Initializing` 시간이 길어질 수 있습니다. 이번 로컬 기준으로 전체 timeline scan 방식은 약 8.6초, `PHY_EPISODE_INDEX` 사용 방식은 약 0.01초가 걸렸습니다.
 
 기본 dataset/sequence:
 

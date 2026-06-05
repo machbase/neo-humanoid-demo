@@ -21,7 +21,7 @@ let conn;
 
 try {
   conn = db.connect();
-  const names = [TABLES.lidar, TABLES.timeline].concat(LEGACY_TABLES);
+  const names = [TABLES.episodeIndex, TABLES.lidar, TABLES.timeline].concat(LEGACY_TABLES);
   for (const name of names) {
     try {
       conn.exec(`DROP TABLE ${name}`);

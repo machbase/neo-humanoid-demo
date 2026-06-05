@@ -521,18 +521,24 @@ function resetVisualTransform() {
   episodeVisualTransform.headingReady = false;
 }
 
-function configureVisualTransform(startFrame, endFrame) {
+function configureVisualTransform(startFrame, headingFrame, fallbackFrame) {
   const start = rawFramePosition(startFrame);
-  const end = rawFramePosition(endFrame || startFrame);
+  const heading = rawFramePosition(headingFrame || startFrame);
+  const fallback = rawFramePosition(fallbackFrame || headingFrame || startFrame);
+  let end = heading;
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
+  let distance = Math.sqrt(dx * dx + dy * dy);
+  if (distance <= VISUAL_HEADING_MIN_DISTANCE_M && fallbackFrame) {
+    end = fallback;
+    distance = Math.sqrt((end.x - start.x) * (end.x - start.x) + (end.y - start.y) * (end.y - start.y));
+  }
   episodeVisualTransform.originX = start.x;
   episodeVisualTransform.originY = start.y;
   episodeVisualTransform.ready = true;
   if (distance > VISUAL_HEADING_MIN_DISTANCE_M) {
-    episodeVisualTransform.forwardX = dx / distance;
-    episodeVisualTransform.forwardY = dy / distance;
+    episodeVisualTransform.forwardX = (end.x - start.x) / distance;
+    episodeVisualTransform.forwardY = (end.y - start.y) / distance;
     episodeVisualTransform.yawOffset = Math.PI / 2 - Math.atan2(episodeVisualTransform.forwardY, episodeVisualTransform.forwardX);
     episodeVisualTransform.baseYaw = Number(startFrame && startFrame.rotation && startFrame.rotation.yaw || 0) + episodeVisualTransform.yawOffset;
     episodeVisualTransform.headingReady = true;
@@ -1274,13 +1280,18 @@ async function prepareEpisodeVisualTransform(ep, generation) {
   try {
     const startFrameId = ep.frameStart;
     const endFrameId = ep.frameEnd;
+    const headingFrameId = ep.category === 'openhe_motion'
+      ? Math.min(endFrameId, startFrameId + Math.min(240, Math.max(1, Math.round(ep.frameCount * 0.08))))
+      : endFrameId;
     const requests = [json(`/api/frame?frameId=${startFrameId}`)];
-    if (endFrameId !== startFrameId) requests.push(json(`/api/frame?frameId=${endFrameId}`));
+    if (headingFrameId !== startFrameId) requests.push(json(`/api/frame?frameId=${headingFrameId}`));
+    if (endFrameId !== startFrameId && endFrameId !== headingFrameId) requests.push(json(`/api/frame?frameId=${endFrameId}`));
     const results = await Promise.all(requests);
     const startPayload = results[0];
-    const endPayload = results[1] || startPayload;
+    const headingPayload = results[1] || startPayload;
+    const endPayload = results[results.length - 1] || headingPayload;
     if (generation !== viewGeneration || selectedEpisode !== ep) return;
-    configureVisualTransform(startPayload.frame || {}, endPayload.frame || startPayload.frame || {});
+    configureVisualTransform(startPayload.frame || {}, headingPayload.frame || startPayload.frame || {}, endPayload.frame || headingPayload.frame || startPayload.frame || {});
     if (currentPayload) {
       updateRobot(currentPayload);
       trailPoints.length = 0;
@@ -1491,16 +1502,23 @@ function resetEpisodeView() {
   loadingPoints = false;
 }
 
-function episodeOptionLabel(ep) {
+function episodeOptionLabel(ep, orderIndex) {
   const name = String(ep.name || 'episode');
   const shortName = name.length > 42 ? `${name.slice(0, 39)}...` : name;
-  return `${String((ep.index || 0) + 1).padStart(2, '0')}  ${shortName}  ${fmtCount(ep.frameCount)} frames`;
+  const index = Number.isFinite(orderIndex) ? orderIndex : (ep.index || 0);
+  return `${String(index + 1).padStart(2, '0')}  ${shortName}  ${fmtCount(ep.frameCount)} frames`;
 }
 
 function taskOptionLabel(task) {
   const category = task.category || 'task';
   const name = task.task || task.name || 'episode';
   return `${category} / ${name}`;
+}
+
+function taskSortRank(task) {
+  if (task.category === 'openhe_motion') return 0;
+  if (task.category === 'loco_manipulation') return 1;
+  return 2;
 }
 
 function populateEpisodes(items) {
@@ -1547,8 +1565,8 @@ function populateEpisodes(items) {
     taskMap[key].frameCount += ep.frameCount;
   }
   taskIndex.sort((a, b) => {
-    const ar = a.category === 'loco_manipulation' ? 0 : 1;
-    const br = b.category === 'loco_manipulation' ? 0 : 1;
+    const ar = taskSortRank(a);
+    const br = taskSortRank(b);
     return ar - br;
   });
   taskSelect.innerHTML = '';
@@ -1568,7 +1586,7 @@ function populateTaskEpisodes(task) {
     const ep = episodes[i];
     const option = document.createElement('option');
     option.value = String(episodeIndex.indexOf(ep));
-    option.textContent = episodeOptionLabel(ep);
+    option.textContent = episodeOptionLabel(ep, i);
     episodeSelect.appendChild(option);
   }
 }

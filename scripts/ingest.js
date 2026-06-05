@@ -64,6 +64,11 @@ function taskName(episodeName) {
   return String(episodeName || '').split('/')[0] || '';
 }
 
+function clip(value, max) {
+  const text = String(value || '');
+  return text.length > max ? text.slice(0, max) : text;
+}
+
 function appendTarget(conn, dataset, sequence) {
   let rows;
   try {
@@ -86,6 +91,25 @@ function appendTarget(conn, dataset, sequence) {
     closeQuietly(rows);
   }
   return null;
+}
+
+function nextEpisodeIndex(conn, dataset, sequence) {
+  let rows;
+  try {
+    rows = conn.query(
+      `SELECT MAX(episode_index) max_episode_index, COUNT(*) row_count FROM ${TABLES.episodeIndex} WHERE dataset = ? AND sequence = ?`,
+      dataset,
+      sequence
+    );
+    for (const row of rows) {
+      const count = Number(rowValue(row, 'row_count') || 0);
+      if (count <= 0) return 0;
+      return Math.max(0, Number(rowValue(row, 'max_episode_index') || 0) + 1);
+    }
+  } finally {
+    closeQuietly(rows);
+  }
+  return 0;
 }
 
 function main() {
@@ -114,6 +138,7 @@ function main() {
   let conn;
   let timelineAppender;
   let pointAppender;
+  let episodeIndexAppender;
   let frameCount = 0;
   let pointFrames = 0;
   let elapsedMs = 0;
@@ -124,8 +149,10 @@ function main() {
     ensureSchema(conn);
     timelineAppender = conn.append(TABLES.timeline);
     pointAppender = conn.append(TABLES.points);
+    episodeIndexAppender = conn.append(TABLES.episodeIndex);
 
     let baseTime = Date.parse(args.baseTime || args['base-time'] || '2026-01-01T00:00:00Z');
+    let episodeIndex = append ? nextEpisodeIndex(conn, dataset, sequence) : 0;
     if (append) {
       const target = appendTarget(conn, dataset, sequence);
       if (target) {
@@ -149,6 +176,22 @@ function main() {
       loadedByTask[task] = loadedByTask[task] || 0;
       if (episodeLimitPerTask > 0 && loadedByTask[task] >= episodeLimitPerTask) continue;
       loadedByTask[task]++;
+      const episodeSummary = {
+        index: episodeIndex,
+        name: episode.name,
+        task: task,
+        category: meta && meta.category || firstStep.category || '',
+        description: meta && meta.description || firstStep.description || '',
+        robotType: meta && meta.robot || firstStep.robot || firstStep.robotType || episode.robotType || '',
+        frameStart: 0,
+        frameEnd: 0,
+        frameCount: 0,
+        stepStart: 0,
+        stepEnd: 0,
+        minTime: null,
+        maxTime: null,
+        pointFrames: 0
+      };
       for (let i = 0; i < episode.steps.length; i++) {
         if (limit > 0 && remaining <= 0) break;
         if (limit <= 0 && targetMs > 0 && elapsedMs >= targetMs) break;
@@ -163,6 +206,17 @@ function main() {
         payload.frame.category = meta && meta.category || step.category || firstStep.category || '';
         payload.frame.taskDescription = meta && meta.description || step.description || firstStep.description || '';
         payload.robot.type = meta && meta.robot || step.robot || step.robotType || payload.robot.type;
+        if (!episodeSummary.frameCount) {
+          episodeSummary.frameStart = globalFrameId;
+          episodeSummary.stepStart = i;
+          episodeSummary.minTime = time;
+          episodeSummary.robotType = episodeSummary.robotType || payload.robot.type || '';
+        }
+        episodeSummary.frameEnd = globalFrameId;
+        episodeSummary.stepEnd = i;
+        episodeSummary.maxTime = time;
+        episodeSummary.frameCount++;
+        if (pointCount > 0) episodeSummary.pointFrames++;
 
         timelineAppender.append(
           `${dataset}.${sequence}.timeline`,
@@ -198,13 +252,37 @@ function main() {
         if (flushEvery > 0 && frameCount % flushEvery === 0) {
           timelineAppender.flush();
           pointAppender.flush();
+          episodeIndexAppender.flush();
           println('ingested frames', frameCount, 'pointFrames', pointFrames);
         }
+      }
+      if (episodeSummary.frameCount > 0) {
+        episodeIndexAppender.append(
+          dataset,
+          sequence,
+          episodeSummary.index,
+          clip(episodeSummary.name, 160),
+          clip(episodeSummary.task, 160),
+          clip(episodeSummary.category, 64),
+          clip(episodeSummary.description, 512),
+          clip(episodeSummary.robotType, 16),
+          episodeSummary.frameStart,
+          episodeSummary.frameEnd,
+          episodeSummary.frameCount,
+          episodeSummary.stepStart,
+          episodeSummary.stepEnd,
+          episodeSummary.minTime,
+          episodeSummary.maxTime,
+          Math.max(0, Math.round(episodeSummary.maxTime.getTime() - episodeSummary.minTime.getTime())),
+          episodeSummary.pointFrames
+        );
+        episodeIndex++;
       }
     }
 
     timelineAppender.flush();
     pointAppender.flush();
+    episodeIndexAppender.flush();
     println(JSON.stringify({
       ok: true,
       dataset: dataset,
@@ -225,6 +303,7 @@ function main() {
   } finally {
     closeQuietly(timelineAppender);
     closeQuietly(pointAppender);
+    closeQuietly(episodeIndexAppender);
     closeQuietly(conn);
     closeQuietly(db);
   }

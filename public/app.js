@@ -7,6 +7,7 @@ const timeline = document.getElementById('timeline');
 const playButton = document.getElementById('playButton');
 const taskSelect = document.getElementById('taskSelect');
 const episodeSelect = document.getElementById('episodeSelect');
+const cameraSelect = document.getElementById('cameraSelect');
 const downloadSensorsLink = document.getElementById('downloadSensorsLink');
 const copyQueryButton = document.getElementById('copyQueryButton');
 const prevEpisodeButton = document.getElementById('prevEpisodeButton');
@@ -48,6 +49,7 @@ const sensorChartCanvas = document.getElementById('sensorChartCanvas');
 const sensorAllCharts = document.getElementById('sensorAllCharts');
 const sensorChartLegend = document.getElementById('sensorChartLegend');
 const sensorButtons = Array.from(document.querySelectorAll('[data-sensor]'));
+const urlParams = new URLSearchParams(window.location.search);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -71,10 +73,70 @@ controls.enablePan = false;
 controls.target.set(0, 0, 1.15);
 controls.maxPolarAngle = Math.PI * 0.52;
 
-let cameraAutoFollow = true;
+const CAMERA_MODES = {
+  follow: {
+    offset: { x: 0, y: -6.2, z: 2.8 },
+    look: { x: 0, y: 0, z: 1.1 },
+    fov: 56,
+    smoothing: 0.1
+  },
+  highFollow: {
+    offset: { x: -3.2, y: -9.5, z: 5.8 },
+    look: { x: 0, y: 0.8, z: 1.1 },
+    fov: 50,
+    smoothing: 0.12
+  },
+  orbit: {
+    look: { x: 0, y: 0, z: 1.1 },
+    fov: 56
+  },
+  top: {
+    offset: { x: 0, y: 0, z: 8.5 },
+    look: { x: 0, y: 0, z: 0.9 },
+    fov: 42,
+    smoothing: 0.18,
+    fixedYaw: true
+  },
+  front: {
+    offset: { x: 0, y: 5.4, z: 2.1 },
+    look: { x: 0, y: 0, z: 1.1 },
+    fov: 52,
+    smoothing: 0.14
+  },
+  side: {
+    offset: { x: 5.2, y: 0, z: 2.2 },
+    look: { x: 0, y: 0, z: 1.1 },
+    fov: 52,
+    smoothing: 0.14
+  },
+  rear: {
+    offset: { x: 0, y: -5.6, z: 2.2 },
+    look: { x: 0, y: 0, z: 1.1 },
+    fov: 52,
+    smoothing: 0.14
+  },
+  shoulder: {
+    offset: { x: 0.45, y: -1.85, z: 1.75 },
+    look: { x: 0, y: 1.15, z: 1.25 },
+    fov: 62,
+    smoothing: 0.22
+  }
+};
+const initialCamera = urlParams.get('camera');
+if (cameraSelect && initialCamera && CAMERA_MODES[initialCamera]) cameraSelect.value = initialCamera;
+controls.enabled = Boolean(cameraSelect && cameraSelect.value === 'orbit');
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const cameraFrameBase = new THREE.Vector3();
+const cameraTarget = new THREE.Vector3(0, 0, 1.15);
+const cameraDesired = new THREE.Vector3();
+const cameraLook = new THREE.Vector3();
+const cameraViewDir = new THREE.Vector3();
+const cameraRight = new THREE.Vector3();
+const cameraScreenUp = new THREE.Vector3();
 const followTarget = new THREE.Vector3(0, 0, 1.15);
 controls.addEventListener('start', () => {
-  cameraAutoFollow = false;
+  followTarget.copy(controls.target);
 });
 
 const studio = new THREE.Group();
@@ -421,7 +483,7 @@ const episodeVisualTransform = {
 };
 
 function apiBase() {
-  const query = new URLSearchParams(window.location.search).get('apiBase');
+  const query = urlParams.get('apiBase');
   if (query) return query.replace(/\/$/, '');
   if (window.location.pathname.indexOf('/db/tql/') >= 0) return 'http://127.0.0.1:56802';
   return '';
@@ -589,9 +651,81 @@ function visualFrameYaw(frame) {
   return episodeVisualTransform.headingReady ? normalized - episodeVisualTransform.baseYaw : normalized;
 }
 
-function followCameraOffset(yaw) {
-  if (episodeVisualTransform.headingReady) return new THREE.Vector3(0, -6.2, 2.8);
-  return new THREE.Vector3(3.5, -5.8, 2.8).applyAxisAngle(new THREE.Vector3(0, 0, 1), yaw);
+function selectedCameraMode() {
+  const mode = cameraSelect && cameraSelect.value || 'follow';
+  return CAMERA_MODES[mode] ? mode : 'follow';
+}
+
+function setCameraVector(value, out) {
+  out.set(Number(value && value.x || 0), Number(value && value.y || 0), Number(value && value.z || 0));
+  return out;
+}
+
+function localCameraPoint(base, yaw, local, rotate, out) {
+  setCameraVector(local, out);
+  if (rotate) out.applyAxisAngle(Z_AXIS, yaw);
+  out.add(base);
+  return out;
+}
+
+function updateCameraFov(targetFov, immediate) {
+  if (!Number.isFinite(targetFov) || Math.abs(camera.fov - targetFov) < 0.05) return;
+  camera.fov += (targetFov - camera.fov) * (immediate ? 1 : 0.18);
+  camera.updateProjectionMatrix();
+}
+
+function applyNarrowCameraComposition(mode, desired, target) {
+  const width = canvas.clientWidth || window.innerWidth || 0;
+  if (width > 620 || mode === 'orbit') return;
+  cameraViewDir.copy(desired).sub(target);
+  const distance = cameraViewDir.length();
+  if (distance <= 0.001) return;
+  cameraViewDir.multiplyScalar(1 / distance);
+  cameraRight.crossVectors(camera.up, cameraViewDir);
+  if (cameraRight.lengthSq() < 0.0001) cameraRight.set(1, 0, 0);
+  cameraRight.normalize();
+  cameraScreenUp.crossVectors(cameraViewDir, cameraRight).normalize();
+  const shift = mode === 'top' ? Math.max(1.2, distance * 0.22) : Math.max(0.65, distance * 0.14);
+  desired.addScaledVector(cameraScreenUp, -shift);
+  target.addScaledVector(cameraScreenUp, -shift);
+}
+
+function applyCameraMode(frame, immediate) {
+  if (!frame) return;
+  const mode = selectedCameraMode();
+  const cfg = CAMERA_MODES[mode] || CAMERA_MODES.follow;
+  const pos = visualFramePosition(frame);
+  const yaw = visualFrameYaw(frame);
+  const rotateWithRobot = !cfg.fixedYaw;
+  cameraFrameBase.set(pos.x, pos.y, pos.z);
+  localCameraPoint(cameraFrameBase, yaw, cfg.look || CAMERA_MODES.follow.look, rotateWithRobot, cameraLook);
+  controls.enabled = mode === 'orbit';
+
+  if (mode === 'orbit') {
+    updateCameraFov(cfg.fov, immediate);
+    if (immediate) {
+      localCameraPoint(cameraFrameBase, yaw, CAMERA_MODES.follow.offset, true, cameraDesired);
+      camera.position.copy(cameraDesired);
+      controls.target.copy(cameraLook);
+      followTarget.copy(cameraLook);
+      return;
+    }
+    cameraTarget.copy(cameraLook).sub(followTarget);
+    camera.position.add(cameraTarget);
+    controls.target.add(cameraTarget);
+    followTarget.copy(cameraLook);
+    return;
+  }
+
+  localCameraPoint(cameraFrameBase, yaw, cfg.offset, rotateWithRobot, cameraDesired);
+  applyNarrowCameraComposition(mode, cameraDesired, cameraLook);
+  const alpha = immediate ? 1 : cfg.smoothing;
+  camera.position.lerp(cameraDesired, alpha);
+  cameraTarget.lerp(cameraLook, alpha);
+  controls.target.copy(cameraTarget);
+  followTarget.copy(cameraTarget);
+  updateCameraFov(cfg.fov, immediate);
+  camera.lookAt(cameraTarget);
 }
 
 function poseFromPayload(payload) {
@@ -1621,31 +1755,11 @@ function syncTimeline() {
 
 function followCamera() {
   const frame = currentPayload && currentPayload.frame || {};
-  const pos = visualFramePosition(frame);
-  const yaw = visualFrameYaw(frame);
-  const target = new THREE.Vector3(pos.x, pos.y, pos.z + 1.1);
-  if (!cameraAutoFollow) {
-    const delta = target.clone().sub(followTarget);
-    camera.position.add(delta);
-    controls.target.add(delta);
-    followTarget.copy(target);
-    return;
-  }
-  const offset = followCameraOffset(yaw);
-  camera.position.lerp(target.clone().add(offset), 0.08);
-  controls.target.lerp(target, 0.12);
-  followTarget.copy(controls.target);
+  applyCameraMode(frame, false);
 }
 
 function resetCameraToFrame(frame) {
-  const pos = visualFramePosition(frame);
-  const yaw = visualFrameYaw(frame);
-  const target = new THREE.Vector3(pos.x, pos.y, pos.z + 1.1);
-  const offset = followCameraOffset(yaw);
-  camera.position.copy(target).add(offset);
-  controls.target.copy(target);
-  followTarget.copy(target);
-  cameraAutoFollow = true;
+  applyCameraMode(frame, true);
   controls.update();
 }
 
@@ -1941,6 +2055,12 @@ timeline.addEventListener('input', () => {
 episodeSelect.addEventListener('change', () => {
   selectEpisode(parseInt(episodeSelect.value || '0', 10) || 0, false);
 });
+
+if (cameraSelect) {
+  cameraSelect.addEventListener('change', () => {
+    resetCameraToFrame(currentPayload && currentPayload.frame || {});
+  });
+}
 
 if (downloadSensorsLink) {
   downloadSensorsLink.addEventListener('click', (event) => {

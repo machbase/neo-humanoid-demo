@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Humanoid Physical AI by Machbase Neo</title>
+  <title>Unitree Physical AI Simulation by Machbase Neo</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
 
     <header class="hud-top">
       <div>
-        <h1>Humanoid Physical AI</h1>
+        <h1>Unitree Physical AI Simulation by Machbase Neo</h1>
         <p id="datasetLabel">Loading Machbase timeline</p>
       </div>
       <div class="live-pill" id="sourceLabel">initializing</div>
@@ -26,6 +26,19 @@
         <button id="nextEpisodeButton" aria-label="Next episode" title="Next episode">Next</button>
       </div>
       <select id="episodeSelect" class="episode-select" aria-label="Episode"></select>
+      <div class="camera-control">
+        <span>View</span>
+        <select id="cameraSelect" aria-label="Camera view">
+          <option value="follow" selected>Follow</option>
+          <option value="highFollow">High Follow</option>
+          <option value="orbit">Orbit</option>
+          <option value="top">Top</option>
+          <option value="front">Front</option>
+          <option value="side">Side</option>
+          <option value="rear">Rear</option>
+          <option value="shoulder">Shoulder</option>
+        </select>
+      </div>
       <div class="download-actions">
         <a id="downloadSensorsLink" class="disabled" href="#" aria-disabled="true" download>Download sensors</a>
         <button id="copyQueryButton" type="button" disabled>Copy query</button>

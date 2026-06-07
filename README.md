@@ -1,4 +1,4 @@
-# Machbase Neo Humanoid Physical AI Demo
+# Unitree Physical AI Simulation by Machbase Neo
 
 Humanoid Everyday 데이터를 Machbase Neo에 저장하고, 브라우저에서 휴머노이드 로봇의 3D 동작, 관절/IMU/손압력/오도메트리 센서 값, 주변 공간 포인트를 재생하는 데모입니다.
 
@@ -512,6 +512,7 @@ DB에는 LOD별 데이터를 따로 저장하지 않고, API가 요청 시 downs
 - RGB/depth/LiDAR media 상태
 - Machbase query latency
 - task/category 선택, episode 선택, 재생/정지와 timeline 이동
+- Follow, High Follow, Orbit, Top, Front, Side, Rear, Shoulder 카메라 view point 선택
 
 ## 3D 모델 리소스
 
